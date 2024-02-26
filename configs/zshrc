@@ -110,10 +110,13 @@ alias zshconfig="vi ~/.zshrc"
 alias ohmyzsh="vi ~/.oh-my-zsh"
 source ~/powerlevel10k/powerlevel10k.zsh-theme
 
-# Personal additions - Koby
+##### Personal additions - koby #####
+export EDITOR='lvim'
 export PATH=$HOME/.local/bin:$PATH
 export PATH=$HOME/.local/nvim-linux64/bin:$PATH
 alias vim="lvim"
+alias vi="lvim"
+alias nvim="lvim"
 HISTSIZE=10000
 SAVEHIST=10000
 export today=$(date +%Y-%m-%d)
@@ -121,6 +124,18 @@ alias remove-zi='find . -type f -name "*Zone.Identifier" -exec rm -v {} \;'
 alias zsh-source-home='source ~/.zshrc'
 alias zsh-edit-home='vi ~/.zshrc'
 alias explore='explorer.exe .'
+alias ssh-agent-start='echo "eval \"\$(ssh-agent -s)\""; eval "$(ssh-agent -s)"'
+
+# function to create ssh keys fast
+ssh-create-key() {
+read -rp "Enter your email: " email
+echo -e "ssh-keygen -t rsa -b 4096 -C \"$email\""
+ssh-keygen -t rsa -b 4096 -C "$email"
+echo -e "ssh-keygen complete. \nUsed email: $email \nRun ssh-agent-start then ssh-add path/to/key"
+}
+
+##### END OF PERSONAL ADDITIONS #####
+
 
 # Added zsh-autosuggestions to plugins
 #autoload -Uz compinit

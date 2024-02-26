@@ -27,7 +27,7 @@ fi
 
 # Copy config.lua from ~/.config/lvim/ to the repo as LVIMconfig.lua
 if ask_permission "Do you want to replace LVIMconfig.lua in the repo with the one from ~/.config/lvim/config.lua?"; then
-    cp ~/.config/lvim/config.lua ./configs//LVIMconfig.lua
+    cp ~/.config/lvim/config.lua ./configs/LVIMconfig.lua
     echo "LVIMconfig.lua has been replaced."
 fi
 
