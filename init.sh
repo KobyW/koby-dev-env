@@ -103,11 +103,24 @@ if proceed_task "Copy LVIMconfig.lua to LunarVim config directory"; then
     cp ./LVIMconfig.lua ~/.config/lvim/config.lua
 fi
 
+# 11. Install zsh autosuggestions
 if proceed_task "Install zsh autosuggestions"; then
   git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
   echo "Need to source zsh for plugin to take effect."
 fi
 
+# 12. install bat (replaces cat)
+if proceed_task "Install bat (better cat)"; then
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get install bat
+    elif command -v yum &> /dev/null; then
+        sudo yum install bat
+    else
+        echo "No suitable package manager found for tmux installation."
+    fi
+fi
+
+# Finally, source the zshrc file.
 if proceed_task "Source zshrc"; then
   source ~/.zshrc
 fi
