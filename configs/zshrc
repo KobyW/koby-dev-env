@@ -125,6 +125,7 @@ alias zsh-source-home='source ~/.zshrc'
 alias zsh-edit-home='vi ~/.zshrc'
 alias explore='explorer.exe .'
 alias ssh-agent-start='echo "eval \"\$(ssh-agent -s)\""; eval "$(ssh-agent -s)"'
+alias cat="batcat"
 
 # function to create ssh keys fast
 ssh-create-key() {
