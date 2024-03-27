@@ -38,3 +38,17 @@ vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter", "FileType"}, {
     vim.opt.formatoptions:remove({"c", "r", "o"})
   end,
 })
+
+lvim.plugins = {
+    -- Ensure nui.nvim is added before noice.nvim
+    {"MunifTanjim/nui.nvim"},
+    {"folke/noice.nvim", 
+        requires = "MunifTanjim/nui.nvim",
+        config = function()
+            require("noice").setup()
+        end
+    },
+    -- Other plugins
+}
+
+
