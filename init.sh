@@ -120,6 +120,11 @@ if proceed_task "Install bat (better cat)"; then
     fi
 fi
 
+# 12. install zoxide (replaces cd)
+if proceed_task "Install zoxide (better cd)"; then
+        curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
+fi
+
 # Finally, source the zshrc file.
 if proceed_task "Source zshrc"; then
   source ~/.zshrc
