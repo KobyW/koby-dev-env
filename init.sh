@@ -122,7 +122,12 @@ fi
 
 # 12. install zoxide (replaces cd)
 if proceed_task "Install zoxide (better cd)"; then
-        curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
+  curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
+fi
+
+# 12. install tpm (tmux plugin manager)
+if proceed_task "Install tpm (tmux plugin manager)"; then
+  git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 fi
 
 # Finally, source the zshrc file.
