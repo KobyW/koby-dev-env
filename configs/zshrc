@@ -115,7 +115,7 @@ export EDITOR='lvim'
 export PATH=$HOME/.local/bin:$PATH
 export PATH=$HOME/.local/nvim-linux64/bin:$PATH
 alias vim="lvim"
-alias vi="lvim"
+#alias vi="lvim"
 alias nvim="lvim"
 HISTSIZE=10000
 SAVEHIST=10000
@@ -126,6 +126,13 @@ alias zsh-edit-home='vi ~/.zshrc'
 alias explore='explorer.exe .'
 alias ssh-agent-start='echo "eval \"\$(ssh-agent -s)\""; eval "$(ssh-agent -s)"'
 alias cat="batcat"
+alias lunar-edit="vi ~/.config/lvim/config.lua"
+alias lunar-edit-lvim="lvim ~/.config/lvim/config.lua"
+
+
+## MACHINE-SPECIFIC-START
+alias pyw-backup="/home/woodk/backups/pyw-periodic-backups/manual-bk-pyw.sh"
+## MACHINE-SPECIFIC-END
 
 # function to create ssh keys fast
 ssh-create-key() {
@@ -135,6 +142,12 @@ ssh-keygen -t rsa -b 4096 -C "$email"
 echo -e "ssh-keygen complete. \nUsed email: $email \nRun ssh-agent-start then ssh-add path/to/key"
 }
 
+# Enable zoxide
+#eval "$(zoxide init zsh)"
+eval "$(zoxide init --cmd cd zsh)"
+#alias cd='z'
+
+bindkey '^N' autosuggest-accept
 ##### END OF PERSONAL ADDITIONS #####
 
 

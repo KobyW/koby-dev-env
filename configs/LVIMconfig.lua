@@ -6,12 +6,17 @@
 -- Set default file format to Unix (LF)
 vim.opt.fileformat = "unix"
 
+-- Set Relative Line Numbers
+vim.opt.relativenumber = true
+vim.opt.number = true
+
 -- Set file formats to try when reading and writing files
 vim.opt.fileformats = { "unix", "dos" }
 
 -- Adding terminal option
 lvim.builtin.which_key.mappings["t"] = {
-  name = "+Terminal",
+  name = "+Terminal  & tailwind",
+  a = {"<cmd>TailwindConcealToggle<cr>", "Toggle Tailwind Conceal"},
   f = { "<cmd>ToggleTerm<cr>", "Floating terminal" },
   v = { "<cmd>2ToggleTerm size=30 direction=vertical<cr>", "Split vertical" },
   h = { "<cmd>2ToggleTerm size=30 direction=horizontal<cr>", "Split horizontal" },
@@ -23,11 +28,19 @@ local function search_and_replace()
   vim.fn.feedkeys(':%s/', 'n')
 end
 
--- Key mapping
+-- Search and Replace
 lvim.keys.normal_mode["<leader>R"] = search_and_replace
 lvim.builtin.which_key.mappings["R"]= {
   name = "Search and Replace"
 }
+
+-- Source lvim config (this file)
+lvim.keys.normal_mode["<leader>S"] = ":source ~/.config/lvim/config.lua<CR>"
+
+-- Copy entire file to sys clipboard
+lvim.keys.normal_mode["<leader>a"] = ":%y+<CR>"
+-- nvim equiv:
+-- vim.api.nvim_set_keymap('n', '<leader>a', ':%y+<CR>', { noremap = true, silent = true })
 
 -- Aggressively remove 'c' flag from formatoptions to stop auto-commenting new lines
 vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter", "FileType"}, {
@@ -42,13 +55,35 @@ vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter", "FileType"}, {
 lvim.plugins = {
     -- Ensure nui.nvim is added before noice.nvim
     {"MunifTanjim/nui.nvim"},
-    {"folke/noice.nvim", 
+    {"folke/noice.nvim",
         requires = "MunifTanjim/nui.nvim",
         config = function()
             require("noice").setup()
         end
     },
-    -- Other plugins
+    {"windwp/nvim-ts-autotag"},
+    {"luckasRanarison/tailwind-tools.nvim"},
 }
 
+-- tailwind-tools config:
+require("tailwind-tools").setup({
+ document_color = {
+    enabled = true,
+    kind = "inline",
+    inline_symbol = "󰝤 ",
+    debounce = 200,
+ },
+ conceal = {
+    enabled = false,
+    symbol = "󱏿",
+    highlight = {
+      fg = "#38BDF8",
+    },
+ },
+ custom_filetypes = {} -- Add any custom filetypes here
+})
+
+-- Diagnostic copy -> format message
+-- local diagcopy = require("koby.diagcopy");
+lvim.keys.normal_mode["<leader>m"] = ":lua require('koby.diagcopy').copy_diagnostics()<CR>"
 

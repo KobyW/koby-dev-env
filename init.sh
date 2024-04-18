@@ -128,6 +128,7 @@ fi
 # 12. install tpm (tmux plugin manager)
 if proceed_task "Install tpm (tmux plugin manager)"; then
   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+  echo "Will need to run this outside of a tmux session: tmux source ~/path/to/tmux/conf"
 fi
 
 # Finally, source the zshrc file.
