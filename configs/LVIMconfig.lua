@@ -63,6 +63,7 @@ lvim.plugins = {
     },
     {"windwp/nvim-ts-autotag"},
     {"luckasRanarison/tailwind-tools.nvim"},
+    {"github/copilot.vim"},
 }
 
 -- tailwind-tools config:
@@ -82,6 +83,22 @@ require("tailwind-tools").setup({
  },
  custom_filetypes = {} -- Add any custom filetypes here
 })
+
+vim.g.copilot_no_tab_map = true
+vim.api.nvim_set_keymap("i", "<Tab>", 'copilot#Accept("<CR>")', { silent = true, expr = true })
+
+-- set current clipboard contents to 'p' register
+
+-- Koby - personal keybindings
+lvim.builtin.which_key.mappings["k"] = {
+  name = "+Koby",
+  j = {"<cmd>lua require('koby/diagcopy').copy_diagnostics()<cr>", "Copy diagnostics"},
+  z = {"<cmd>lua require('koby/clipboardToReg').set_clipboard_to_register()<cr>", "Set clipboard to z register"},
+  m = {"<cmd>lua require('koby/removeCtrlM').remove_ctrl_m()<cr>", "Remove all ^M characters"},
+}
+
+-- transparent window enable
+lvim.transparent_window = true
 
 -- Diagnostic copy -> format message
 -- local diagcopy = require("koby.diagcopy");
