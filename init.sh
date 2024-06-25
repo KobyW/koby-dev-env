@@ -14,9 +14,10 @@ if ! command -v git &> /dev/null; then
 fi
 
 # Check if the git repo is up to date
+git config --global init.defaultBranch main
 git fetch origin
 HEADHASH=$(git rev-parse HEAD)
-UPSTREAMHASH=$(git rev-parse master@{upstream})
+UPSTREAMHASH=$(git rev-parse main@{upstream})
 
 if [ "$HEADHASH" != "$UPSTREAMHASH" ]; then
     read -p "Your git repo is not up to date. Do you want to update? (y/Y to confirm): " update_repo
