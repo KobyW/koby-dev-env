@@ -1,0 +1,6 @@
+#### RENAME THIS FILE TO HAVE A .zshrc PREFIX
+#### THEN SOURCE ZSHRC
+
+#### This is an example file for machine-specific configs
+
+alias example='echo "example"'
