@@ -73,6 +73,23 @@ source ~/powerlevel10k/powerlevel10k.zsh-theme
 ##### Personal additions - koby #####
 
 ## MISC ##
+export today=$(date +%Y-%m-%d)
+export currentTime=$(date +%Y-%m-%d:%H:%M:%S)
+
+# Edit machine-specific zshrc
+edit-machine-specific(){
+  if [ -f "$HOME/koby-dev-env/env/zsh-machine-specific.zshrc" ]; then
+    vim $HOME/koby-dev-env/env/zsh-machine-specific.zshrc
+  else
+    echo -e "${YELLOW}Initial edit detected, creating zsh-machine-specific.zshr${NC}"
+    sleep 1
+    cp $HOME/koby-dev-env/env/zsh-machine-specific.zshrc $HOME/koby-dev-env/env/zsh-machine-specific.zshrc.bk-${today} 2> /dev/null
+    cp $HOME/koby-dev-env/env/zsh-machine-specific.example $HOME/koby-dev-env/env/zsh-machine-specific.zshrc
+    vim $HOME/koby-dev-env/env/zsh-machine-specific.zshrc
+  fi
+}
+alias ezm=edit-machine-specific
+
 echo -e "${BLUE}Loading misc exports and aliases..${NC}"
 
 export EDITOR='vim'
@@ -86,7 +103,6 @@ alias xp="xclip -selection clipboard -o"
 HISTSIZE=10000
 SAVEHIST=10000
 
-export today=$(date +%Y-%m-%d)
 alias remove-zi='find . -type f -name "*Zone.Identifier" -exec rm -v {} \;'
 alias sz='source $HOME/.zshrc && echo -e "${YELLOW}Sourced $HOME/.zshrc${NC}"'
 alias ez='vim $HOME/.zshrc'
@@ -141,7 +157,7 @@ done
 unset zshrc_directories
 
 # delay to check debug messages
-#sleep 6
+# sleep 6
 
 clear
 pfetch
