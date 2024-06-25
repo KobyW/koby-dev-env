@@ -1,3 +1,1 @@
-./env/*machine-specific*
-./*/*machine-specific*
-
+env/zsh-machine-specific.zshrc
