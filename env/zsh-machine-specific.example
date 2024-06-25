@@ -1,6 +1,6 @@
-#### RENAME THIS FILE TO HAVE A .zshrc PREFIX
-#### THEN SOURCE ZSHRC
+#### RENAME THIS FILE TO HAVE A .zshrc PREFIX THEN SOURCE zshrc
+#### OR USE 'ezm'
 
-#### This is an example file for machine-specific configs
+# Host: example-machine
 
 alias example='echo "example"'
