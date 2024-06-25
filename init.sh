@@ -7,6 +7,12 @@ if [[ $confirm_server != [yY] ]]; then
     exit 1
 fi
 
+# Check if git is installed and install if not
+if ! command -v git &> /dev/null; then
+    echo "Git is not installed. Installing git..."
+    sudo apt-get install git
+fi
+
 # Check if the git repo is up to date
 git fetch origin
 HEADHASH=$(git rev-parse HEAD)
