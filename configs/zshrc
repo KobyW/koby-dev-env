@@ -82,7 +82,7 @@ edit-machine-specific(){
     vim $HOME/koby-dev-env/env/zsh-machine-specific.zshrc
   else
     echo -e "${YELLOW}Initial edit detected, creating zsh-machine-specific.zshr${NC}"
-    sleep 1
+    sleep 2
     cp $HOME/koby-dev-env/env/zsh-machine-specific.zshrc $HOME/koby-dev-env/env/zsh-machine-specific.zshrc.bk-${today} 2> /dev/null
     cp $HOME/koby-dev-env/env/zsh-machine-specific.example $HOME/koby-dev-env/env/zsh-machine-specific.zshrc
     vim $HOME/koby-dev-env/env/zsh-machine-specific.zshrc
@@ -113,7 +113,7 @@ alias ssh-agent-start='echo "eval \"\$(ssh-agent -s)\""; eval "$(ssh-agent -s)"'
 alias cat="batcat --style=plain"
 alias lunar-edit="vi ~/.config/lvim/config.lua"
 alias lunar-edit-lvim="lvim ~/.config/lvim/config.lua"
-alias tpm-install="rm -rf ~/.config/tmux/plugins/tmux ~/.tmux/plugins/tpm/scripts/install_plugins.sh"
+alias tpm-install="rm -rf ~/.config/tmux/plugins/tmux && ~/.tmux/plugins/tpm/scripts/install_plugins.sh"
 alias tmux-edit-home="vim ~/.tmux.conf"
 alias tmux-reset="tmux kill-server; rm -rf /tmp/tmux-* && tpm-install"
 alias tmux-restart="tmux kill-server; rm -rf /tmp/tmux-* && tpm-install"

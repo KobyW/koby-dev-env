@@ -107,7 +107,7 @@ fi
 # 10. Copy LVIMconfig.lua to ~/.config/lvim/ as 'config.lua'
 if proceed_task "Copy LVIMconfig.lua to LunarVim config directory"; then
     mkdir -p ~/.config/lvim/
-    cp ./LVIMconfig.lua ~/.config/lvim/config.lua
+    cp ./configs/LVIMconfig.lua ~/.config/lvim/config.lua
 fi
 
 # 11. Install zsh autosuggestions
