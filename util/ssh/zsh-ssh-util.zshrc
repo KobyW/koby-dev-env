@@ -219,12 +219,12 @@ function sendsshkeys() {
                     local ssh_key="${server#*-i }"
                     local ssh_server="${server%-i*}"
                     ssh_server=$(echo "$ssh_server" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-                    local scp_command="$HOME/koby-linux-env/util/ssh_with_passphrase.exp \"$ssh_passphrase\" \"$ssh_key\" \"$key\" \"$ssh_server:~/.ssh/\""
+                    local scp_command="$HOME/koby-dev-env/util/ssh/ssh_with_passphrase.exp \"$ssh_passphrase\" \"$ssh_key\" \"$key\" \"$ssh_server:~/.ssh/\""
                     echo "Running command: $scp_command"
                     eval $scp_command
                 else
                     server=$(echo "$server" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-                    local scp_command="$HOME/koby-linux-env/util/ssh_with_passphrase.exp \"$ssh_passphrase\" \"\" \"$key\" \"$server:~/.ssh/\""
+                    local scp_command="$HOME/koby-dev-env/util/ssh/ssh_with_passphrase.exp \"$ssh_passphrase\" \"\" \"$key\" \"$server:~/.ssh/\""
                     echo "Running command: $scp_command"
                     eval $scp_command
                 fi
