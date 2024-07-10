@@ -20,9 +20,9 @@ WORKDIR /home/testuser
 # Create a directory for your dotfiles
 RUN mkdir -p /home/testuser/dotfiles
 
-# Copy init.sh and tasks.txt into the container
+# Copy init.sh and tasks.ini into the container
 COPY init.sh /home/testuser/koby-dev-env/
-COPY tasks.txt /home/testuser/koby-dev-env/
+COPY tasks.ini /home/testuser/koby-dev-env/
 
 # Make sure the script is executable
 RUN chmod +x /home/testuser/dotfiles/init.sh
