@@ -25,7 +25,7 @@ COPY init.sh /home/testuser/koby-dev-env/
 COPY tasks.ini /home/testuser/koby-dev-env/
 
 # Make sure the script is executable
-RUN chmod +x /home/testuser/koby-dev-env/init.sh
+#RUN chmod +x /home/testuser/koby-dev-env/init.sh
 
 # Set the entry point to bash
 CMD ["/bin/bash"]
