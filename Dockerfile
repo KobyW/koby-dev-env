@@ -21,11 +21,11 @@ WORKDIR /home/testuser
 RUN mkdir -p /home/testuser/koby-dev-env
 
 # Copy init.sh and tasks.ini into the container
+COPY configs/ /home/testuser/koby-dev-env/configs/
+COPY util/ /home/testuser/koby-dev-env/util/
+COPY env/ /home/testuser/koby-dev-env/env/
 COPY init.sh /home/testuser/koby-dev-env/
 COPY tasks.ini /home/testuser/koby-dev-env/
-
-# Make sure the script is executable
-#RUN chmod +x /home/testuser/koby-dev-env/init.sh
 
 # Set the entry point to bash
 CMD ["/bin/bash"]
