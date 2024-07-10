@@ -17,8 +17,8 @@ RUN useradd -m -s /bin/bash testuser && \
 USER testuser
 WORKDIR /home/testuser
 
-# Create a directory for your dotfiles
-RUN mkdir -p /home/testuser/dotfiles
+# Ensure parent directory exists for repo
+RUN mkdir -p /home/testuser/koby-dev-env
 
 # Copy init.sh and tasks.ini into the container
 COPY init.sh /home/testuser/koby-dev-env/
