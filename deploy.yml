@@ -1,6 +1,7 @@
 ---
 - name: Setup Development Environment
   hosts: all
+  become: yes
   vars:
     selected_tasks: "all"
 
