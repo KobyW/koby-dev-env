@@ -28,8 +28,6 @@ RUN mkdir -p /home/testuser/koby-dev-env
 COPY configs/ /home/testuser/koby-dev-env/configs/
 COPY util/ /home/testuser/koby-dev-env/util/
 COPY env/ /home/testuser/koby-dev-env/env/
-COPY init.sh /home/testuser/koby-dev-env/
-COPY tasks.ini /home/testuser/koby-dev-env/
 
 # Set the entry point to bash
 CMD ["/bin/bash"]
