@@ -6,7 +6,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Update and install necessary packages
 RUN apt-get update && apt-get install -y \
     sudo \
-    uuid-runtime \
+    ssh \
+    python3 \
+    python3-pip \
+    vim \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
