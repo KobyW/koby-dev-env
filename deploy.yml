@@ -1,0 +1,283 @@
+---
+- name: Setup Development Environment
+  hosts: all
+  vars:
+    tasks: "all"
+
+  tasks:
+    - name: Ensure git is installed
+      become: yes
+      ansible.builtin.package:
+        name: git
+        state: present
+
+    - name: Clone koby-dev-env repository
+      ansible.builtin.git:
+        repo: https://github.com/KobyW/koby-dev-env
+        dest: "{{ ansible_env.HOME }}/koby-dev-env"
+        version: main
+        update: no
+
+    - name: Install zsh
+      become: yes
+      ansible.builtin.package:
+        name: zsh
+        state: present
+      when: "'all' in tasks or 'light' in tasks or 'zsh' in tasks"
+
+    - name: Install pip
+      become: yes
+      ansible.builtin.package:
+        name: python3-pip
+        state: present
+      when: "'all' in tasks or 'pip' in tasks"
+
+    - name: Install expect
+      become: yes
+      ansible.builtin.package:
+        name: expect
+        state: present
+      when: "'all' in tasks or 'expect' in tasks"
+
+    - name: Check if Oh My Zsh is installed
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/.oh-my-zsh"
+      register: oh_my_zsh_installed
+
+    - name: Install Oh My Zsh
+      ansible.builtin.shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+      when: 
+        - not oh_my_zsh_installed.stat.exists
+        - "'all' in tasks or 'light' in tasks or 'oh-my-zsh' in tasks"
+
+    - name: Install P10K
+      block:
+        - name: Backup existing p10k.zsh
+          ansible.builtin.copy:
+            src: "{{ ansible_env.HOME }}/.p10k.zsh"
+            dest: "{{ ansible_env.HOME }}/.p10k.zsh.bak"
+            remote_src: yes
+          ignore_errors: yes
+        - name: Link p10k.zsh
+          ansible.builtin.file:
+            src: "{{ ansible_env.HOME }}/koby-dev-env/configs/p10k.zsh"
+            dest: "{{ ansible_env.HOME }}/.p10k.zsh"
+            state: link
+            force: yes
+      when: "'all' in tasks or 'light' in tasks or 'p10k' in tasks"
+
+    - name: Check if Neovim is installed
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/.local/bin/nvim"
+      register: neovim_installed
+
+    - name: Install Neovim v0.9.5
+      block:
+        - name: Download Neovim
+          ansible.builtin.get_url:
+            url: https://github.com/neovim/neovim/releases/download/v0.9.5/nvim-linux64.tar.gz
+            dest: /tmp/nvim-linux64.tar.gz
+        - name: Extract Neovim
+          become: yes
+          ansible.builtin.unarchive:
+            src: /tmp/nvim-linux64.tar.gz
+            dest: "{{ ansible_env.HOME }}/.local/bin/"
+            remote_src: yes
+        - name: Remove Neovim archive
+          ansible.builtin.file:
+            path: /tmp/nvim-linux64.tar.gz
+            state: absent
+      when: 
+        - not neovim_installed.stat.exists
+        - "'all' in tasks or 'light' in tasks or 'neovim' in tasks"
+
+    - name: Copy .zshrc to home directory
+      block:
+        - name: Backup existing .zshrc
+          ansible.builtin.copy:
+            src: "{{ ansible_env.HOME }}/.zshrc"
+            dest: "{{ ansible_env.HOME }}/.zshrc.bak"
+            remote_src: yes
+          ignore_errors: yes
+        - name: Link .zshrc
+          ansible.builtin.file:
+            src: "{{ ansible_env.HOME }}/koby-dev-env/configs/zshrc"
+            dest: "{{ ansible_env.HOME }}/.zshrc"
+            state: link
+            force: yes
+      when: "'all' in tasks or 'zshrc-copy' in tasks"
+
+    - name: Install tmux
+      become: yes
+      ansible.builtin.package:
+        name: tmux
+        state: present
+      when: "'all' in tasks or 'light' in tasks or 'tmux' in tasks"
+
+    - name: Install fzf
+      become: yes
+      ansible.builtin.package:
+        name: fzf
+        state: present
+      when: "'all' in tasks or 'light' in tasks or 'fzf' in tasks"
+
+    - name: Copy .tmux.conf to home directory
+      block:
+        - name: Backup existing .tmux.conf
+          ansible.builtin.copy:
+            src: "{{ ansible_env.HOME }}/.tmux.conf"
+            dest: "{{ ansible_env.HOME }}/.tmux.conf.bak"
+            remote_src: yes
+          ignore_errors: yes
+        - name: Link .tmux.conf
+          ansible.builtin.file:
+            src: "{{ ansible_env.HOME }}/koby-dev-env/configs/tmux.conf"
+            dest: "{{ ansible_env.HOME }}/.tmux.conf"
+            state: link
+            force: yes
+      when: "'all' in tasks or 'tmux-copy' in tasks"
+
+    - name: Install npm
+      become: yes
+      ansible.builtin.package:
+        name: npm
+        state: present
+      when: "'all' in tasks or 'npm' in tasks"
+
+    - name: Install unzip
+      become: yes
+      ansible.builtin.package:
+        name: unzip
+        state: present
+      when: "'all' in tasks or 'unzip' in tasks"
+
+    - name: Install wget
+      become: yes
+      ansible.builtin.package:
+        name: wget
+        state: present
+      when: "'all' in tasks or 'wget' in tasks"
+
+    - name: Check if pfetch is installed
+      ansible.builtin.stat:
+        path: /usr/local/bin/pfetch
+      register: pfetch_installed
+
+    - name: Install pfetch
+      block:
+        - name: Download pfetch
+          ansible.builtin.get_url:
+            url: https://github.com/dylanaraps/pfetch/archive/master.zip
+            dest: /tmp/pfetch-master.zip
+        - name: Unzip pfetch
+          ansible.builtin.unarchive:
+            src: /tmp/pfetch-master.zip
+            dest: /tmp/
+            remote_src: yes
+        - name: Install pfetch
+          become: yes
+          ansible.builtin.copy:
+            src: /tmp/pfetch-master/pfetch
+            dest: /usr/local/bin/pfetch
+            mode: '0755'
+        - name: Clean up pfetch files
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - /tmp/pfetch-master.zip
+            - /tmp/pfetch-master
+      when: 
+        - not pfetch_installed.stat.exists
+        - "'all' in tasks or 'light' in tasks or 'pfetch' in tasks"
+
+    - name: Install lazydocker
+      ansible.builtin.shell: curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
+      args:
+        creates: /usr/local/bin/lazydocker
+      when: "'all' in tasks or 'light' in tasks or 'lazydocker' in tasks"
+
+    - name: Check if Lazygit is installed
+      ansible.builtin.stat:
+        path: /usr/local/bin/lazygit
+      register: lazygit_installed
+
+    - name: Install Lazygit
+      block:
+        - name: Download Lazygit
+          ansible.builtin.get_url:
+            url: "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_0.42.0_Linux_x86_64.tar.gz"
+            dest: /tmp/lazygit.tar.gz
+        - name: Extract Lazygit
+          ansible.builtin.unarchive:
+            src: /tmp/lazygit.tar.gz
+            dest: /tmp/
+            remote_src: yes
+        - name: Install Lazygit
+          become: yes
+          ansible.builtin.copy:
+            src: /tmp/lazygit
+            dest: /usr/local/bin/lazygit
+            mode: '0755'
+        - name: Clean up Lazygit files
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - /tmp/lazygit.tar.gz
+            - /tmp/lazygit
+      when: 
+        - not lazygit_installed.stat.exists
+        - "'all' in tasks or 'light' in tasks or 'lazygit' in tasks"
+
+    - name: Install cargo
+      ansible.builtin.shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      args:
+        creates: "{{ ansible_env.HOME }}/.cargo/bin/cargo"
+      when: "'all' in tasks or 'cargo' in tasks"
+
+    - name: Install LunarVim
+      ansible.builtin.shell: LV_BRANCH='release-1.3/neovim-0.9' bash <(curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh) -y
+      args:
+        creates: "{{ ansible_env.HOME }}/.local/bin/lvim"
+      when: "'all' in tasks or 'lunarvim' in tasks"
+
+    - name: Copy LVIMconfig.lua to LunarVim config directory
+      block:
+        - name: Create LunarVim config directory
+          ansible.builtin.file:
+            path: "{{ ansible_env.HOME }}/.config/lvim"
+            state: directory
+        - name: Copy config file
+          ansible.builtin.copy:
+            src: "{{ ansible_env.HOME }}/koby-dev-env/configs/LVIMconfig.lua"
+            dest: "{{ ansible_env.HOME }}/.config/lvim/config.lua"
+            remote_src: yes
+      when: "'all' in tasks or 'lvim-config' in tasks"
+
+    - name: Install zsh-autosuggestions
+      ansible.builtin.git:
+        repo: https://github.com/zsh-users/zsh-autosuggestions
+        dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+        update: no
+      when: "'all' in tasks or 'light' in tasks or 'zsh-autosuggestions' in tasks"
+
+    - name: Install bat
+      become: yes
+      ansible.builtin.package:
+        name: bat
+        state: present
+      when: "'all' in tasks or 'light' in tasks or 'bat' in tasks"
+
+    - name: Install zoxide
+      ansible.builtin.shell: curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
+      args:
+        creates: "{{ ansible_env.HOME }}/.local/bin/zoxide"
+      when: "'all' in tasks or 'light' in tasks or 'zoxide' in tasks"
+
+    - name: Install tpm (tmux plugin manager)
+      ansible.builtin.git:
+        repo: https://github.com/tmux-plugins/tpm
+        dest: "{{ ansible_env.HOME }}/.tmux/plugins/tpm"
+        update: no
+      when: "'all' in tasks or 'light' in tasks or 'tpm' in tasks"
