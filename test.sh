@@ -50,7 +50,7 @@ function start_container() {
         "${TEMP_DIR}"
 
     # Run the container
-    docker run -d -P --name "${NAME}" "debian-env-test"
+    docker run -d -p 127.0.0.1:2222:22 --name "${NAME}" "debian-env-test"
 
     # Get the IP address of the container
     CONTAINER_ADDR=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${NAME}")
@@ -63,7 +63,7 @@ function setup_test_inventory() {
 
     cat > "${TEMP_INVENTORY_FILE}" << EOL
 [target_group]
-${CONTAINER_ADDR}:22
+127.0.0.1:2222
 [target_group:vars]
 ansible_ssh_private_key_file=${TEMP_DIR}/id_rsa
 EOL
