@@ -188,6 +188,7 @@
             src: /tmp/pfetch-master/pfetch
             dest: /usr/local/bin/pfetch
             mode: '0755'
+            remote_src: yes
         - name: Clean up pfetch files
           ansible.builtin.file:
             path: "{{ item }}"
@@ -227,6 +228,7 @@
             src: /tmp/lazygit
             dest: /usr/local/bin/lazygit
             mode: '0755'
+            remote_src: yes
         - name: Clean up Lazygit files
           ansible.builtin.file:
             path: "{{ item }}"
