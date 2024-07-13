@@ -91,16 +91,24 @@
           ansible.builtin.get_url:
             url: https://github.com/neovim/neovim/releases/download/v0.9.5/nvim-linux64.tar.gz
             dest: /tmp/nvim-linux64.tar.gz
+
         - name: Extract Neovim
           become: yes
           ansible.builtin.unarchive:
             src: /tmp/nvim-linux64.tar.gz
             dest: "{{ ansible_env.HOME }}/.local/bin/"
             remote_src: yes
+
         - name: Remove Neovim archive
           ansible.builtin.file:
             path: /tmp/nvim-linux64.tar.gz
             state: absent
+
+        - name: Ensure NeoVim is in PATH in zshrc
+          ansible.builtin.lineinfile:
+            path: "{{ ansible_env.HOME }}/.zshrc"
+            line: 'export PATH="/usr/local/nvim-linux64/bin:$PATH"'
+
       when: 
         - not neovim_installed.stat.exists
         - "'all' in selected_tasks or 'light' in selected_tasks or 'neovim' in selected_tasks"
