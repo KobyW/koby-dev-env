@@ -3,7 +3,7 @@
   hosts: all
   become: yes
   vars:
-    selected_tasks: "all"
+    selected_tasks: "light"
 
   tasks:
 
