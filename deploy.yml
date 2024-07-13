@@ -139,7 +139,7 @@
             state: link
             force: yes
 
-      when: "'all' in selected_tasks or 'zshrc-copy' in selected_tasks"
+      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zshrc-copy' in selected_tasks"
     ### ZSH END ###
 
 
@@ -251,7 +251,7 @@
             dest: "{{ ansible_env.HOME }}/.tmux.conf"
             state: link
             force: yes
-      when: "'all' in selected_tasks or 'tmux-copy' in selected_tasks"
+      when: "'all' in selected_tasks or 'light' in selected_tasks or 'tmux-copy' in selected_tasks"
     ### TMUX END ###
 
 
