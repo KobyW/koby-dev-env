@@ -74,6 +74,13 @@
 
     - name: Install Neovim v0.9.5
       block:
+
+        - name: Create .local/bin directory
+          ansible.builtin.file:
+            path: "{{ ansible_env.HOME }}/.local/bin"
+            state: directory
+            mode: '0755'
+
         - name: Download Neovim
           ansible.builtin.get_url:
             url: https://github.com/neovim/neovim/releases/download/v0.9.5/nvim-linux64.tar.gz
