@@ -70,18 +70,18 @@ EOL
     export TEMP_INVENTORY_FILE
 }
 
+# Run the Ansible playbook
+function run_ansible_playbook() {
+    ANSIBLE_CONFIG="${base_dir}/ansible.cfg"
+    ansible-playbook -i "${TEMP_INVENTORY_FILE}" -vvv "${base_dir}/deploy.yml"
+}
+
 # Function that asks user if they want to enter the container before exiting
 function enter_container() {
   read -p "Do you want to enter the container? [y/n]" is_entering
   if [[ "${is_entering}" == "y" ]]; then
     docker exec -it "${NAME}" /bin/bash
   fi
-}
-
-# Run the Ansible playbook
-function run_ansible_playbook() {
-    ANSIBLE_CONFIG="${base_dir}/ansible.cfg"
-    ansible-playbook -i "${TEMP_INVENTORY_FILE}" -vvv "${base_dir}/deploy.yml"
 }
 
 # Main execution flow
