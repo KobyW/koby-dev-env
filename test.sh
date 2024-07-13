@@ -70,6 +70,14 @@ EOL
     export TEMP_INVENTORY_FILE
 }
 
+# Function that asks user if they want to enter the container before exiting
+function enter_container() {
+  read -p "Do you want to enter the container? [y/n]" is_entering
+  if [[ "${is_entering}" == "y" ]]; then
+    docker exec -it "${NAME}" /bin/bash
+  fi
+}
+
 # Run the Ansible playbook
 function run_ansible_playbook() {
     ANSIBLE_CONFIG="${base_dir}/ansible.cfg"
@@ -84,3 +92,4 @@ create_temporary_ssh_id
 start_container
 setup_test_inventory
 run_ansible_playbook
+enter_container
