@@ -6,6 +6,8 @@
     selected_tasks: "all"
 
   tasks:
+
+    ### REQUIRED START ###
     - name: Ensure git is installed
       become: yes
       ansible.builtin.package:
@@ -25,6 +27,56 @@
         version: main
         update: no
 
+    - name: Install pip
+      become: yes
+      ansible.builtin.package:
+        name: python3-pip
+        state: present
+
+    - name: Install unzip
+      become: yes
+      ansible.builtin.package:
+        name: unzip
+        state: present
+    ### REQUIRED END ###
+
+    ### LIGHT MISC START ###
+    - name: Install bat
+      become: yes
+      ansible.builtin.package:
+        name: bat
+        state: present
+      when: "'all' in selected_tasks or 'light' in selected_tasks or 'bat' in selected_tasks"
+
+    - name: Install zoxide
+      ansible.builtin.shell: curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
+      args:
+        creates: "{{ ansible_env.HOME }}/.local/bin/zoxide"
+      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zoxide' in selected_tasks"
+
+    - name: Install fzf
+      become: yes
+      ansible.builtin.package:
+        name: fzf
+        state: present
+      when: "'all' in selected_tasks or 'light' in selected_tasks or 'fzf' in selected_tasks"
+
+    - name: Install expect
+      become: yes
+      ansible.builtin.package:
+        name: expect
+        state: present
+      when: "'all' in selected_tasks or 'light' in selected_tasks or 'expect' in selected_tasks"
+
+    - name: Install wget
+      become: yes
+      ansible.builtin.package:
+        name: wget
+        state: present
+      when: "'all' in selected_tasks or 'light' in selected_tasks or 'wget' in selected_tasks"
+    ### LIGHT MISC END ###
+
+    ### ZSH START ###
     - name: Install zsh
       become: yes
       ansible.builtin.package:
@@ -32,19 +84,24 @@
         state: present
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'zsh' in selected_tasks"
 
-    - name: Install pip
-      become: yes
-      ansible.builtin.package:
-        name: python3-pip
-        state: present
-      when: "'all' in selected_tasks or 'pip' in selected_tasks"
+    - name: Copy .zshrc to home directory
+      block:
 
-    - name: Install expect
-      become: yes
-      ansible.builtin.package:
-        name: expect
-        state: present
-      when: "'all' in selected_tasks or 'expect' in selected_tasks"
+        - name: Backup existing .zshrc
+          ansible.builtin.copy:
+            src: "{{ ansible_env.HOME }}/.zshrc"
+            dest: "{{ ansible_env.HOME }}/.zshrc.bak"
+            remote_src: yes
+          ignore_errors: yes
+
+        - name: Link .zshrc
+          ansible.builtin.file:
+            src: "{{ ansible_env.HOME }}/koby-dev-env/configs/zshrc"
+            dest: "{{ ansible_env.HOME }}/.zshrc"
+            state: link
+            force: yes
+
+      when: "'all' in selected_tasks or 'zshrc-copy' in selected_tasks"
 
     - name: Check if Oh My Zsh is installed
       ansible.builtin.stat:
@@ -57,6 +114,15 @@
         - not oh_my_zsh_installed.stat.exists
         - "'all' in selected_tasks or 'light' in selected_tasks or 'oh-my-zsh' in selected_tasks"
 
+    - name: Install zsh-autosuggestions
+      ansible.builtin.git:
+        repo: https://github.com/zsh-users/zsh-autosuggestions
+        dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+        update: no
+      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zsh-autosuggestions' in selected_tasks"
+    ### ZSH END ###
+
+    ### P10k START ###
     - name: Install P10K
       block:
 
@@ -82,7 +148,10 @@
             force: yes
 
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'p10k' in selected_tasks"
+    ### P10k END ###
 
+
+    ### NeoVim START ###
     - name: Check if Neovim is installed
       ansible.builtin.stat:
         path: "{{ ansible_env.HOME }}/.local/bin/nvim"
@@ -122,23 +191,10 @@
       when: 
         - not neovim_installed.stat.exists
         - "'all' in selected_tasks or 'light' in selected_tasks or 'neovim' in selected_tasks"
+    ### NeoVim END ###
 
-    - name: Copy .zshrc to home directory
-      block:
-        - name: Backup existing .zshrc
-          ansible.builtin.copy:
-            src: "{{ ansible_env.HOME }}/.zshrc"
-            dest: "{{ ansible_env.HOME }}/.zshrc.bak"
-            remote_src: yes
-          ignore_errors: yes
-        - name: Link .zshrc
-          ansible.builtin.file:
-            src: "{{ ansible_env.HOME }}/koby-dev-env/configs/zshrc"
-            dest: "{{ ansible_env.HOME }}/.zshrc"
-            state: link
-            force: yes
-      when: "'all' in selected_tasks or 'zshrc-copy' in selected_tasks"
 
+    ### TMUX START ###
     - name: Install tmux
       become: yes
       ansible.builtin.package:
@@ -152,13 +208,6 @@
         dest: "{{ ansible_env.HOME }}/.tmux/plugins/tpm"
         update: no
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'tpm' in selected_tasks or 'tmux' in selected_tasks"
-
-    - name: Install fzf
-      become: yes
-      ansible.builtin.package:
-        name: fzf
-        state: present
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'fzf' in selected_tasks"
 
     - name: Copy .tmux.conf to home directory
       block:
@@ -175,28 +224,10 @@
             state: link
             force: yes
       when: "'all' in selected_tasks or 'tmux-copy' in selected_tasks"
+    ### TMUX END ###
 
-    - name: Install npm
-      become: yes
-      ansible.builtin.package:
-        name: npm
-        state: present
-      when: "'all' in selected_tasks or 'npm' in selected_tasks"
 
-    - name: Install unzip
-      become: yes
-      ansible.builtin.package:
-        name: unzip
-        state: present
-      when: "'all' in selected_tasks or 'unzip' in selected_tasks"
-
-    - name: Install wget
-      become: yes
-      ansible.builtin.package:
-        name: wget
-        state: present
-      when: "'all' in selected_tasks or 'wget' in selected_tasks"
-
+    ### PFETCH START ###
     - name: Check if pfetch is installed
       ansible.builtin.stat:
         path: /usr/local/bin/pfetch
@@ -204,6 +235,7 @@
 
     - name: Install pfetch
       block:
+
         - name: Download pfetch
           ansible.builtin.get_url:
             url: https://github.com/dylanaraps/pfetch/archive/master.zip
@@ -227,11 +259,15 @@
           loop:
             - /tmp/pfetch-master.zip
             - /tmp/pfetch-master
+
       when: 
         - not pfetch_installed.stat.exists
         - "'all' in selected_tasks or 'light' in selected_tasks or 'pfetch' in selected_tasks"
+    ### PFETCH END ###
 
-    - name: Install lazydocker
+
+    ### LAZY TOOLING START ###
+    - name: Install Lazydocker
       ansible.builtin.shell: curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
       args:
         creates: /usr/local/bin/lazydocker
@@ -244,6 +280,7 @@
 
     - name: Install Lazygit
       block:
+        
         - name: Download Lazygit
           ansible.builtin.get_url:
             url: "https://github.com/jesseduffield/lazygit/releases/download/v0.43.1/lazygit_0.43.1_Linux_x86_64.tar.gz"
@@ -267,32 +304,23 @@
           loop:
             - /tmp/lazygit.tar.gz
             - /tmp/lazygit
+
       when: 
         - not lazygit_installed.stat.exists
         - "'all' in selected_tasks or 'light' in selected_tasks or 'lazygit' in selected_tasks"
+    ### LAZY TOOLING END ###
 
+    ### MISC HEAVY START ###
     - name: Install cargo
       ansible.builtin.shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       args:
         creates: "{{ ansible_env.HOME }}/.cargo/bin/cargo"
       when: "'all' in selected_tasks or 'cargo' in selected_tasks"
 
-    - name: Install zsh-autosuggestions
-      ansible.builtin.git:
-        repo: https://github.com/zsh-users/zsh-autosuggestions
-        dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
-        update: no
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zsh-autosuggestions' in selected_tasks"
-
-    - name: Install bat
+    - name: Install npm
       become: yes
       ansible.builtin.package:
-        name: bat
+        name: npm
         state: present
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'bat' in selected_tasks"
-
-    - name: Install zoxide
-      ansible.builtin.shell: curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
-      args:
-        creates: "{{ ansible_env.HOME }}/.local/bin/zoxide"
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zoxide' in selected_tasks"
+      when: "'all' in selected_tasks or 'npm' in selected_tasks"
+    ### MISC HEAVY END ###
