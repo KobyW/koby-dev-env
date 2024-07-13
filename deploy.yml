@@ -33,10 +33,10 @@
         name: python3-pip
         state: present
 
-    - name: Ensure build-essentials is installed
+    - name: Ensure build-essential is installed
       become: yes
       ansible.builtin.package:
-        name: build-essentials
+        name: build-essential
         state: present
 
     - name: Ensure net-tools is installed
