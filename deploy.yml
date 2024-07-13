@@ -329,6 +329,12 @@
         creates: "{{ ansible_env.HOME }}/.cargo/bin/cargo"
       when: "'all' in selected_tasks or 'cargo' in selected_tasks"
 
+    - name: Install jc
+      become: yes
+      ansible.builtin.pip:
+        name: jc
+        state: present
+      when: "'all' in selected_tasks or 'jc' in selected_tasks"
     - name: Install npm
       become: yes
       ansible.builtin.package:
