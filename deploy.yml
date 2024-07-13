@@ -59,18 +59,27 @@
 
     - name: Install P10K
       block:
+
+        - name: Clone Powerlevel10k repository
+          ansible.builtin.git:
+            repo: 'https://github.com/romkatv/powerlevel10k.git'
+            dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/themes/powerlevel10k"
+            depth: 1
+
         - name: Backup existing p10k.zsh
           ansible.builtin.copy:
             src: "{{ ansible_env.HOME }}/.p10k.zsh"
             dest: "{{ ansible_env.HOME }}/.p10k.zsh.bak"
             remote_src: yes
           ignore_errors: yes
+
         - name: Link p10k.zsh
           ansible.builtin.file:
             src: "{{ ansible_env.HOME }}/koby-dev-env/configs/p10k.zsh"
             dest: "{{ ansible_env.HOME }}/.p10k.zsh"
             state: link
             force: yes
+
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'p10k' in selected_tasks"
 
     - name: Check if Neovim is installed
@@ -104,7 +113,7 @@
             path: /tmp/nvim-linux64.tar.gz
             state: absent
 
-        - name: Ensure NeoVim is in PATH in zshrc
+        - name: Ensure NeoVim is exported to PATH via zshrc
           ansible.builtin.lineinfile:
             path: "{{ ansible_env.HOME }}/.zshrc"
             line: 'export PATH="/usr/local/nvim-linux64/bin:$PATH"'
