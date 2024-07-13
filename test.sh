@@ -93,7 +93,6 @@ function enter_container() {
   if [[ "${is_entering}" == "y" ]]; then
     docker exec -it "${NAME}" /bin/bash
   fi
-
 }
 
 function ask_cleanup(){
@@ -105,8 +104,8 @@ function ask_cleanup(){
 
 # Main execution flow
 setup_tempdir
+trap npm_warning EXIT
 trap ask_cleanup EXIT
-trap npm_warning ERR
 trap ask_cleanup ERR
 create_temporary_ssh_id
 start_container
