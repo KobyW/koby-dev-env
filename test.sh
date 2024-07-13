@@ -87,6 +87,9 @@ function enter_container() {
     docker exec -it "${NAME}" /bin/bash
   fi
 
+}
+
+function ask_cleanup(){
   read -p "Do you want to perform a cleanup on the test resources? [y/n]" do_cleanup
   if [[ "${do_cleanup}" == "y"  ]]; then
     cleanup
@@ -95,7 +98,7 @@ function enter_container() {
 
 # Main execution flow
 setup_tempdir
-trap cleanup EXIT
+trap ask_cleanup EXIT
 trap npm_warning ERR
 trap cleanup ERR
 create_temporary_ssh_id
