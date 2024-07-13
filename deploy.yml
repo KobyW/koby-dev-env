@@ -25,7 +25,7 @@
         repo: https://github.com/KobyW/koby-dev-env
         dest: "{{ ansible_env.HOME }}/koby-dev-env"
         version: main
-        update: no
+        update: "{{ 'sync' in selected_tasks }}"
 
     - name: Install pip
       become: yes
