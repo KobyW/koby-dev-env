@@ -29,7 +29,7 @@ function cleanup() {
 }
 
 function npm_warning() {
-    echo "If the NPM installation fails, try running again. It happens sometimes."
+    echo "NOTE: The NPM installation sometimes fails. If it does, feel free to ignore the error if it does not affect the test results"
 }
 
 # Create temporary directory
