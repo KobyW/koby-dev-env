@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+### THIS SCRIPT TESTS THE deploy.yml ANSIBLE PLAYBOOK IN A LOCAL DOCKER CONTAINER ###
+
 ## ORIGINALLY FROM: https://dev.to/pencillr/test-ansible-playbooks-using-docker-ci0
 ## MODIFIED TO MEET MY NEEDS
 
