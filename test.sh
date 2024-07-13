@@ -82,6 +82,11 @@ function enter_container() {
   if [[ "${is_entering}" == "y" ]]; then
     docker exec -it "${NAME}" /bin/bash
   fi
+
+  read -p "Do you want to perform a cleanup on the test resources? [y/n]" do_cleanup
+  if [[ "${do_cleanup}" == "y"  ]]; then
+    cleanup
+  fi
 }
 
 # Main execution flow
