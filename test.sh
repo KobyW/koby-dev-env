@@ -28,6 +28,10 @@ function cleanup() {
     fi
 }
 
+function npm_warning() {
+    echo "If the NPM installation fails, try running again. It happens sometimes."
+}
+
 # Create temporary directory
 function setup_tempdir() {
     TEMP_DIR=$(mktemp --directory "/tmp/${NAME}".XXXXXXXX)
@@ -92,6 +96,7 @@ function enter_container() {
 # Main execution flow
 setup_tempdir
 trap cleanup EXIT
+trap npm_warning ERR
 trap cleanup ERR
 create_temporary_ssh_id
 start_container
