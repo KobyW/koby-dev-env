@@ -190,7 +190,7 @@
           become: yes
           ansible.builtin.unarchive:
             src: /tmp/nvim-linux64.tar.gz
-            dest: "{{ ansible_env.HOME }}/.local/bin/"
+            dest: "/usr/.local/bin/"
             remote_src: yes
 
         - name: Remove Neovim archive
