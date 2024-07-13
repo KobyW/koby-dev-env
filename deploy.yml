@@ -52,6 +52,7 @@
         state: present
     ### REQUIRED END ###
 
+
     ### LIGHT MISC START ###
     - name: Install bat
       become: yes
@@ -345,6 +346,14 @@
         name: jq
         state: present
       when: "'all' in selected_tasks or 'jq' in selected_tasks"
+
+    - name: Install docker
+      become: yes
+      ansible.builtin.package:
+        name: docker
+        state: present
+      when: "'all' in selected_tasks or 'docker' in selected_tasks"
+
     - name: Install npm
       become: yes
       ansible.builtin.package:
