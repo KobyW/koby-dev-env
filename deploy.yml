@@ -12,6 +12,12 @@
         name: git
         state: present
 
+    - name: Ensure curl is installed
+      become: yes
+      ansible.builtin.package:
+        name: curl
+        state: present
+
     - name: Clone koby-dev-env repository
       ansible.builtin.git:
         repo: https://github.com/KobyW/koby-dev-env
