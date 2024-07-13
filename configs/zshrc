@@ -76,6 +76,9 @@ source ~/powerlevel10k/powerlevel10k.zsh-theme
 export today=$(date +%Y-%m-%d)
 export currentTime=$(date +%Y-%m-%d:%H:%M:%S)
 
+export TERM="xterm-256color"
+export COLORTERM="truecolor"
+
 # Edit machine-specific zshrc
 edit-machine-specific(){
   if [ -f "$HOME/koby-dev-env/env/zsh-machine-specific.zshrc" ]; then
@@ -161,6 +164,8 @@ unset zshrc_directories
 
 clear
 pfetch
+HOSTNAME=$(hostname)
+echo -e "${GREEN}HOST:${HOSTNAME} ${NC}"
 
 ##### END OF PERSONAL ADDITIONS #####
 
@@ -172,3 +177,9 @@ pfetch
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+export PATH="$HOME/.spin/bin:$PATH"
+
+purge_path_duplicates() {
+    export PATH=$(echo -n $PATH | awk -v RS=: -v ORS=: '!($0 in a) {a[$0]; print}' | sed 's/:$//')
+}
+purge_path_duplicates
