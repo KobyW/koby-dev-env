@@ -175,9 +175,9 @@
     - name: Install Neovim v0.9.5
       block:
 
-        - name: Create .local/bin directory
+        - name: Ensure /usr/.local/bin directory exists
           ansible.builtin.file:
-            path: "{{ ansible_env.HOME }}/.local/bin"
+            path: "/usr/.local/bin"
             state: directory
             mode: '0755'
 
