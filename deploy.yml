@@ -122,6 +122,13 @@
         state: present
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'tmux' in selected_tasks"
 
+    - name: Install tpm (tmux plugin manager)
+      ansible.builtin.git:
+        repo: https://github.com/tmux-plugins/tpm
+        dest: "{{ ansible_env.HOME }}/.tmux/plugins/tpm"
+        update: no
+      when: "'all' in selected_tasks or 'light' in selected_tasks or 'tpm' in selected_tasks or 'tmux' in selected_tasks"
+
     - name: Install fzf
       become: yes
       ansible.builtin.package:
@@ -246,25 +253,6 @@
         creates: "{{ ansible_env.HOME }}/.cargo/bin/cargo"
       when: "'all' in selected_tasks or 'cargo' in selected_tasks"
 
-    - name: Install LunarVim
-      ansible.builtin.shell: LV_BRANCH='release-1.3/neovim-0.9' bash <(curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh) -y
-      args:
-        creates: "{{ ansible_env.HOME }}/.local/bin/lvim"
-      when: "'all' in selected_tasks or 'lunarvim' in selected_tasks"
-
-    - name: Copy LVIMconfig.lua to LunarVim config directory
-      block:
-        - name: Create LunarVim config directory
-          ansible.builtin.file:
-            path: "{{ ansible_env.HOME }}/.config/lvim"
-            state: directory
-        - name: Copy config file
-          ansible.builtin.copy:
-            src: "{{ ansible_env.HOME }}/koby-dev-env/configs/LVIMconfig.lua"
-            dest: "{{ ansible_env.HOME }}/.config/lvim/config.lua"
-            remote_src: yes
-      when: "'all' in selected_tasks or 'lvim-config' in selected_tasks"
-
     - name: Install zsh-autosuggestions
       ansible.builtin.git:
         repo: https://github.com/zsh-users/zsh-autosuggestions
@@ -284,10 +272,3 @@
       args:
         creates: "{{ ansible_env.HOME }}/.local/bin/zoxide"
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'zoxide' in selected_tasks"
-
-    - name: Install tpm (tmux plugin manager)
-      ansible.builtin.git:
-        repo: https://github.com/tmux-plugins/tpm
-        dest: "{{ ansible_env.HOME }}/.tmux/plugins/tpm"
-        update: no
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'tpm' in selected_tasks"
