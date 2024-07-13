@@ -177,7 +177,7 @@
 
         - name: Ensure /usr/.local/bin directory exists
           ansible.builtin.file:
-            path: "/usr/local/bin"
+            path: "{{ ansible_env.HOME }}/.local/bin"
             state: directory
             mode: '0755'
 
@@ -190,13 +190,20 @@
           become: yes
           ansible.builtin.unarchive:
             src: /tmp/nvim-linux64.tar.gz
-            dest: "/usr/local/bin/"
+            dest: "{{ ansible_env.HOME }}/.local/bin/"
             remote_src: yes
 
         - name: Remove Neovim archive
           ansible.builtin.file:
             path: /tmp/nvim-linux64.tar.gz
             state: absent
+
+        - name: Link Neovim to /usr/local/bin
+          ansible.builtin.file:
+            src: "{{ ansible_env.HOME }}/.local/bin/nvim-linux64/bin/nvim"
+            dest: "/usr/local/bin/nvim"
+            state: link
+            force: yes
 
         - name: Ensure NeoVim is exported to PATH via zshrc
           ansible.builtin.lineinfile:
