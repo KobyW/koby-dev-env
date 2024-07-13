@@ -100,7 +100,7 @@ function ask_cleanup(){
 setup_tempdir
 trap ask_cleanup EXIT
 trap npm_warning ERR
-trap cleanup ERR
+trap ask_cleanup ERR
 create_temporary_ssh_id
 start_container
 setup_test_inventory
