@@ -88,6 +88,7 @@
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'wget' in selected_tasks"
     ### LIGHT MISC END ###
 
+
     ### ZSH START ###
     - name: Install zsh
       become: yes
@@ -133,6 +134,7 @@
 
       when: "'all' in selected_tasks or 'zshrc-copy' in selected_tasks"
     ### ZSH END ###
+
 
     ### P10k START ###
     - name: Install P10K
@@ -322,6 +324,7 @@
         - "'all' in selected_tasks or 'light' in selected_tasks or 'lazygit' in selected_tasks"
     ### LAZY TOOLING END ###
 
+
     ### MISC HEAVY START ###
     - name: Install cargo
       ansible.builtin.shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -335,6 +338,13 @@
         name: jc
         state: present
       when: "'all' in selected_tasks or 'jc' in selected_tasks"
+
+    - name: Install jq
+      become: yes
+      ansible.builtin.package:
+        name: jq
+        state: present
+      when: "'all' in selected_tasks or 'jq' in selected_tasks"
     - name: Install npm
       become: yes
       ansible.builtin.package:
