@@ -45,6 +45,12 @@
         name: net-tools
         state: present
 
+    - name: Ensure nmap is installed
+      become: yes
+      ansible.builtin.package:
+        name: nmap
+        state: present
+
     - name: Install unzip
       become: yes
       ansible.builtin.package:
