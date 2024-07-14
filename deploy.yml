@@ -360,10 +360,10 @@
         state: present
       when: "'all' in selected_tasks or 'jq' in selected_tasks"
 
-    - name: Install docker
+    - name: Install docker.io
       become: yes
       ansible.builtin.package:
-        name: docker
+        name: docker.io
         state: present
       when: "'all' in selected_tasks or 'docker' in selected_tasks"
 
