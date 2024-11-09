@@ -2,7 +2,6 @@
 # Run via ansible-playbook -i <inventory> deploy.yml --extra-vars "@/creds/<vault>.yml" --ask-vault-pass --private-key=<private-key-path> 
 - name: Setup Development Environment
   hosts: all
-  become: yes
   vars:
     selected_tasks: "light"
 
@@ -206,6 +205,7 @@
             state: absent
 
         - name: Link Neovim to /usr/local/bin
+          become: yes
           ansible.builtin.file:
             src: "{{ ansible_env.HOME }}/.local/bin/nvim-linux64/bin/nvim"
             dest: "/usr/local/bin/nvim"
@@ -213,6 +213,7 @@
             force: yes
 
         - name: Ensure NeoVim is exported to PATH via zshrc
+          become: yes
           ansible.builtin.lineinfile:
             path: "{{ ansible_env.HOME }}/.zshrc"
             line: 'export PATH="/usr/local/nvim-linux64/bin:$PATH"'
