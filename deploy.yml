@@ -4,6 +4,9 @@
   hosts: all
   vars:
     selected_tasks: "light"
+    # THE PASSED VAULT WILL NEED THE FOLLOWING VARIABLES:
+    ansible_user: "{{ vault_ansible_user }}"
+    ansible_sudo_pass: "{{ vault_sudo_pass }}"
 
   tasks:
 
