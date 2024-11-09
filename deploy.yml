@@ -1,4 +1,5 @@
 ---
+# Run via ansible-playbook -i <inventory> deploy.yml --extra-vars "@/creds/<vault>.yml" --ask-vault-pass --private-key=<private-key-path> 
 - name: Setup Development Environment
   hosts: all
   become: yes
