@@ -145,6 +145,13 @@
 
 
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'zshrc-copy' in selected_tasks"
+
+    - name: Ensure zsh is the default shell
+      become: yes
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        shell: /bin/zsh
+      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zsh-shell' in selected_tasks"
     ### ZSH END ###
 
 
