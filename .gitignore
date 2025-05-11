@@ -2,3 +2,4 @@ env/zsh-machine-specific.zshrc
 hosts/
 creds/
 inventory.ini
+deploy-command.txt
