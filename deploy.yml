@@ -381,6 +381,13 @@
         state: present
       when: "'all' in selected_tasks or 'docker' in selected_tasks"
 
+    - name: Install docker compose plugin
+      become: yes
+      ansible.builtin.package:
+        name: docker-compose-plugin
+        state: present
+      when: "'all' in selected_tasks or 'docker' in selected_tasks or 'docker-compose' in selected_tasks"
+
     - name: Install npm
       become: yes
       ansible.builtin.package:
