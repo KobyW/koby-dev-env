@@ -103,6 +103,10 @@ alias vim="lvim"
 alias xc="xclip -selection clipboard"
 alias xp="xclip -selection clipboard -o"
 
+alias dev="git checkout dev"
+alias stage="git checkout stage"
+alias main="git checkout main"
+
 HISTSIZE=10000
 SAVEHIST=10000
 
@@ -183,3 +187,12 @@ purge_path_duplicates() {
     export PATH=$(echo -n $PATH | awk -v RS=: -v ORS=: '!($0 in a) {a[$0]; print}' | sed 's/:$//')
 }
 purge_path_duplicates
+
+# bun completions
+[ -s "/home/woodk/.bun/_bun" ] && source "/home/woodk/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+alias claude="/home/woodk/.claude/local/claude"

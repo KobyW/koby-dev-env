@@ -104,3 +104,8 @@ lvim.transparent_window = true
 -- local diagcopy = require("koby.diagcopy");
 lvim.keys.normal_mode["<leader>m"] = ":lua require('koby.diagcopy').copy_diagnostics()<CR>"
 
+-- Increase cmdheight when starting to record a macro
+vim.cmd [[ autocmd RecordingEnter * set cmdheight=1 ]]
+
+-- Reset cmdheight when stopping the recording of a macro
+vim.cmd [[ autocmd RecordingLeave * set cmdheight=0 ]]
