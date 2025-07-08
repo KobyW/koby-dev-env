@@ -3,7 +3,7 @@
 - name: Setup Development Environment
   hosts: all
   vars:
-    selected_tasks: "light"
+    selected_tasks: "docker"
     # THE PASSED VAULT WILL NEED THE FOLLOWING VARIABLES:
     ansible_user: "{{ vault_ansible_user }}"
     ansible_sudo_pass: "{{ vault_sudo_pass }}"
@@ -27,7 +27,7 @@
     - name: Clone koby-dev-env repository
       ansible.builtin.git:
         repo: https://github.com/KobyW/koby-dev-env
-        dest: "{{ lookup('env', 'HOME') }}/koby-dev-env"
+        dest: "/home/{{ ansible_user }}/koby-dev-env"
         version: main
         update: "{{ 'sync' in selected_tasks }}"
 
@@ -74,7 +74,7 @@
     - name: Install zoxide
       ansible.builtin.shell: curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
       args:
-        creates: "{{ lookup('env', 'HOME') }}/.local/bin/zoxide"
+        creates: "/home/{{ ansible_user }}/.local/bin/zoxide"
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'zoxide' in selected_tasks"
 
     - name: Install fzf
@@ -110,7 +110,7 @@
 
     - name: Check if Oh My Zsh is installed
       ansible.builtin.stat:
-        path: "{{ lookup('env', 'HOME') }}/.oh-my-zsh"
+        path: "/home/{{ ansible_user }}/.oh-my-zsh"
       register: oh_my_zsh_installed
 
     - name: Install Oh My Zsh
@@ -122,7 +122,7 @@
     - name: Install zsh-autosuggestions
       ansible.builtin.git:
         repo: https://github.com/zsh-users/zsh-autosuggestions
-        dest: "{{ lookup('env', 'HOME') }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+        dest: "/home/{{ ansible_user }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
         update: no
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'zsh-autosuggestions' in selected_tasks"
 
@@ -131,15 +131,15 @@
 
         - name: Backup existing .zshrc
           ansible.builtin.copy:
-            src: "{{ lookup('env', 'HOME') }}/.zshrc"
-            dest: "{{ lookup('env', 'HOME') }}/.zshrc.bak"
+            src: "/home/{{ ansible_user }}/.zshrc"
+            dest: "/home/{{ ansible_user }}/.zshrc.bak"
             remote_src: yes
           ignore_errors: yes
 
         - name: Link .zshrc
           ansible.builtin.file:
-            src: "{{ lookup('env', 'HOME') }}/koby-dev-env/configs/zshrc"
-            dest: "{{ lookup('env', 'HOME') }}/.zshrc"
+            src: "/home/{{ ansible_user }}/koby-dev-env/configs/zshrc"
+            dest: "/home/{{ ansible_user }}/.zshrc"
             state: link
             force: yes
 
@@ -162,21 +162,21 @@
         - name: Clone Powerlevel10k repository
           ansible.builtin.git:
             repo: 'https://github.com/romkatv/powerlevel10k.git'
-              #dest: "{{ lookup('env', 'HOME') }}/.oh-my-zsh/custom/themes/powerlevel10k"
-            dest: "{{ lookup('env', 'HOME') }}/powerlevel10k"
+              #dest: "/home/{{ ansible_user }}/.oh-my-zsh/custom/themes/powerlevel10k"
+            dest: "/home/{{ ansible_user }}/powerlevel10k"
             depth: 1
 
         - name: Backup existing p10k.zsh
           ansible.builtin.copy:
-            src: "{{ lookup('env', 'HOME') }}/.p10k.zsh"
-            dest: "{{ lookup('env', 'HOME') }}/.p10k.zsh.bak"
+            src: "/home/{{ ansible_user }}/.p10k.zsh"
+            dest: "/home/{{ ansible_user }}/.p10k.zsh.bak"
             remote_src: yes
           ignore_errors: yes
 
         - name: Link p10k.zsh
           ansible.builtin.file:
-            src: "{{ lookup('env', 'HOME') }}/koby-dev-env/configs/p10k.zsh"
-            dest: "{{ lookup('env', 'HOME') }}/.p10k.zsh"
+            src: "/home/{{ ansible_user }}/koby-dev-env/configs/p10k.zsh"
+            dest: "/home/{{ ansible_user }}/.p10k.zsh"
             state: link
             force: yes
 
@@ -187,7 +187,7 @@
     ### NeoVim START ###
     - name: Check if Neovim is installed
       ansible.builtin.stat:
-        path: "{{ lookup('env', 'HOME') }}/.local/bin/nvim"
+        path: "/home/{{ ansible_user }}/.local/bin/nvim"
       register: neovim_installed
 
     - name: Install Neovim v0.9.5
@@ -195,7 +195,7 @@
 
         - name: Ensure /usr/.local/bin directory exists
           ansible.builtin.file:
-            path: "{{ lookup('env', 'HOME') }}/.local/bin"
+            path: "/home/{{ ansible_user }}/.local/bin"
             state: directory
             mode: '0755'
 
@@ -208,7 +208,7 @@
           become: yes
           ansible.builtin.unarchive:
             src: /tmp/nvim-linux64.tar.gz
-            dest: "{{ lookup('env', 'HOME') }}/.local/bin/"
+            dest: "/home/{{ ansible_user }}/.local/bin/"
             remote_src: yes
 
         - name: Remove Neovim archive
@@ -219,7 +219,7 @@
         - name: Link Neovim to /usr/local/bin
           become: yes
           ansible.builtin.file:
-            src: "{{ lookup('env', 'HOME') }}/.local/bin/nvim-linux64/bin/nvim"
+            src: "/home/{{ ansible_user }}/.local/bin/nvim-linux64/bin/nvim"
             dest: "/usr/local/bin/nvim"
             state: link
             force: yes
@@ -227,7 +227,7 @@
         - name: Ensure NeoVim is exported to PATH via zshrc
           become: yes
           ansible.builtin.lineinfile:
-            path: "{{ lookup('env', 'HOME') }}/.zshrc"
+            path: "/home/{{ ansible_user }}/.zshrc"
             line: 'export PATH="/usr/local/nvim-linux64/bin:$PATH"'
 
       when: 
@@ -247,7 +247,7 @@
     - name: Install tpm (tmux plugin manager)
       ansible.builtin.git:
         repo: https://github.com/tmux-plugins/tpm
-        dest: "{{ lookup('env', 'HOME') }}/.tmux/plugins/tpm"
+        dest: "/home/{{ ansible_user }}/.tmux/plugins/tpm"
         update: no
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'tpm' in selected_tasks or 'tmux' in selected_tasks"
 
@@ -255,14 +255,14 @@
       block:
         - name: Backup existing .tmux.conf
           ansible.builtin.copy:
-            src: "{{ lookup('env', 'HOME') }}/.tmux.conf"
-            dest: "{{ lookup('env', 'HOME') }}/.tmux.conf.bak"
+            src: "/home/{{ ansible_user }}/.tmux.conf"
+            dest: "/home/{{ ansible_user }}/.tmux.conf.bak"
             remote_src: yes
           ignore_errors: yes
         - name: Link .tmux.conf
           ansible.builtin.file:
-            src: "{{ lookup('env', 'HOME') }}/koby-dev-env/configs/tmux.conf"
-            dest: "{{ lookup('env', 'HOME') }}/.tmux.conf"
+            src: "/home/{{ ansible_user }}/koby-dev-env/configs/tmux.conf"
+            dest: "/home/{{ ansible_user }}/.tmux.conf"
             state: link
             force: yes
       when: "'all' in selected_tasks or 'light' in selected_tasks or 'tmux-copy' in selected_tasks"
@@ -357,22 +357,22 @@
     - name: Install cargo
       ansible.builtin.shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       args:
-        creates: "{{ lookup('env', 'HOME') }}/.cargo/bin/cargo"
+        creates: "/home/{{ ansible_user }}/.cargo/bin/cargo"
       when: "'all' in selected_tasks or 'cargo' in selected_tasks"
 
-    - name: Install jc
-      become: yes
-      ansible.builtin.pip:
-        name: jc
-        state: present
-      when: "'all' in selected_tasks or 'jc' in selected_tasks"
-
-    - name: Install jq
-      become: yes
-      ansible.builtin.package:
-        name: jq
-        state: present
-      when: "'all' in selected_tasks or 'jq' in selected_tasks"
+        #    - name: Install jc
+        #      become: yes
+        #      ansible.builtin.pip:
+        #        name: jc
+        #        state: present
+        #      when: "'all' in selected_tasks or 'jc' in selected_tasks"
+        #
+        #    - name: Install jq
+        #      become: yes
+        #      ansible.builtin.package:
+        #        name: jq
+        #        state: present
+        #      when: "'all' in selected_tasks or 'jq' in selected_tasks"
 
     - name: Install docker.io
       become: yes
