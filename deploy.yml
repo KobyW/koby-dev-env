@@ -1,9 +1,14 @@
 ---
-# Run via ansible-playbook -i <inventory> deploy.yml --extra-vars "@/creds/<vault>.yml" --ask-vault-pass --private-key=<private-key-path> 
+# Run via ansible-playbook -i <inventory> deploy.yml --extra-vars "@/creds/<vault>.yml" --ask-vault-pass --private-key=<private-key-path>
+# Use tags to control which tasks run:
+#   --tags "light" - Install lightweight tools and configs
+#   --tags "heavy" - Install resource-intensive tools
+#   --tags "zsh,tmux" - Install specific tools only
+#   --skip-tags "heavy" - Install everything except heavy tools
+# By default (no tags specified), all tasks will run
 - name: Setup Development Environment
   hosts: all
   vars:
-    selected_tasks: "docker"
     # THE PASSED VAULT WILL NEED THE FOLLOWING VARIABLES:
     ansible_user: "{{ vault_ansible_user }}"
     ansible_sudo_pass: "{{ vault_sudo_pass }}"
@@ -17,49 +22,75 @@
       ansible.builtin.package:
         name: git
         state: present
+      tags:
+        - always
 
     - name: Ensure curl is installed
       become: yes
       ansible.builtin.package:
         name: curl
         state: present
+      tags:
+        - always
 
     - name: Clone koby-dev-env repository
       ansible.builtin.git:
         repo: https://github.com/KobyW/koby-dev-env
         dest: "/home/{{ ansible_user }}/koby-dev-env"
         version: main
-        update: "{{ 'sync' in selected_tasks }}"
+        update: no
+      tags:
+        - always
+
+    - name: Sync koby-dev-env repository
+      ansible.builtin.git:
+        repo: https://github.com/KobyW/koby-dev-env
+        dest: "/home/{{ ansible_user }}/koby-dev-env"
+        version: main
+        update: yes
+      tags:
+        - never
+        - sync
 
     - name: Install pip
       become: yes
       ansible.builtin.package:
         name: python3-pip
         state: present
+      tags:
+        - always
 
     - name: Ensure build-essential is installed
       become: yes
       ansible.builtin.package:
         name: build-essential
         state: present
+      tags:
+        - always
 
     - name: Ensure net-tools is installed
       become: yes
       ansible.builtin.package:
         name: net-tools
         state: present
+      tags:
+        - always
 
     - name: Ensure nmap is installed
       become: yes
       ansible.builtin.package:
         name: nmap
         state: present
+      tags:
+        - always
 
     - name: Install unzip
       become: yes
       ansible.builtin.package:
         name: unzip
         state: present
+      tags:
+        - always
     ### REQUIRED END ###
 
 
@@ -69,34 +100,44 @@
       ansible.builtin.package:
         name: bat
         state: present
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'bat' in selected_tasks"
+      tags:
+        - light
+        - bat
 
     - name: Install zoxide
       ansible.builtin.shell: curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
       args:
         creates: "/home/{{ ansible_user }}/.local/bin/zoxide"
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zoxide' in selected_tasks"
+      tags:
+        - light
+        - zoxide
 
     - name: Install fzf
       become: yes
       ansible.builtin.package:
         name: fzf
         state: present
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'fzf' in selected_tasks"
+      tags:
+        - light
+        - fzf
 
     - name: Install expect
       become: yes
       ansible.builtin.package:
         name: expect
         state: present
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'expect' in selected_tasks"
+      tags:
+        - light
+        - expect
 
     - name: Install wget
       become: yes
       ansible.builtin.package:
         name: wget
         state: present
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'wget' in selected_tasks"
+      tags:
+        - light
+        - wget
     ### LIGHT MISC END ###
 
 
@@ -106,25 +147,37 @@
       ansible.builtin.package:
         name: zsh
         state: present
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zsh' in selected_tasks"
+      tags:
+        - light
+        - zsh
 
     - name: Check if Oh My Zsh is installed
       ansible.builtin.stat:
         path: "/home/{{ ansible_user }}/.oh-my-zsh"
       register: oh_my_zsh_installed
+      tags:
+        - light
+        - zsh
+        - oh-my-zsh
 
     - name: Install Oh My Zsh
       ansible.builtin.shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
       when: 
         - not oh_my_zsh_installed.stat.exists
-        - "'all' in selected_tasks or 'light' in selected_tasks or 'oh-my-zsh' in selected_tasks"
+      tags:
+        - light
+        - zsh
+        - oh-my-zsh
 
     - name: Install zsh-autosuggestions
       ansible.builtin.git:
         repo: https://github.com/zsh-users/zsh-autosuggestions
         dest: "/home/{{ ansible_user }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
         update: no
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zsh-autosuggestions' in selected_tasks"
+      tags:
+        - light
+        - zsh
+        - zsh-autosuggestions
 
     - name: Copy .zshrc to home directory
       block:
@@ -143,15 +196,30 @@
             state: link
             force: yes
 
-
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zshrc-copy' in selected_tasks"
+      tags:
+        - light
+        - zsh
+        - zshrc-copy
 
     - name: Ensure zsh is the default shell
       become: yes
       ansible.builtin.user:
         name: "{{ ansible_user }}"
         shell: /bin/zsh
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'zsh-shell' in selected_tasks"
+      tags:
+        - light
+        - zsh
+        - zsh-shell
+
+    - name: Export SHELL environment variable
+      ansible.builtin.lineinfile:
+        path: "/home/{{ ansible_user }}/.bashrc"
+        line: 'export SHELL=/bin/zsh'
+        create: yes
+      tags:
+        - light
+        - zsh
+        - zsh-shell
     ### ZSH END ###
 
 
@@ -180,7 +248,9 @@
             state: link
             force: yes
 
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'p10k' in selected_tasks"
+      tags:
+        - light
+        - p10k
     ### P10k END ###
 
 
@@ -189,6 +259,9 @@
       ansible.builtin.stat:
         path: "/home/{{ ansible_user }}/.local/bin/nvim"
       register: neovim_installed
+      tags:
+        - light
+        - neovim
 
     - name: Install Neovim v0.9.5
       block:
@@ -232,8 +305,80 @@
 
       when: 
         - not neovim_installed.stat.exists
-        - "'all' in selected_tasks or 'light' in selected_tasks or 'neovim' in selected_tasks"
+      tags:
+        - light
+        - neovim
     ### NeoVim END ###
+
+
+    ### LunarVim START ###
+    - name: Check if LunarVim is installed
+      ansible.builtin.stat:
+        path: "/home/{{ ansible_user }}/.local/bin/lvim"
+      register: lunarvim_installed
+      tags:
+        - light
+        - lunarvim
+        - lvim
+
+    - name: Install LunarVim
+      block:
+        - name: Download and install LunarVim
+          ansible.builtin.shell: |
+            curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.4/neovim-0.9/utils/installer/install.sh | bash -s -- --no-install-dependencies
+          environment:
+            LV_BRANCH: "release-1.4/neovim-0.9"
+          args:
+            creates: "/home/{{ ansible_user }}/.local/bin/lvim"
+
+      when: 
+        - not lunarvim_installed.stat.exists
+      tags:
+        - light
+        - lunarvim
+        - lvim
+
+    - name: Deploy LunarVim configuration
+      block:
+        - name: Ensure LunarVim config directory exists
+          ansible.builtin.file:
+            path: "/home/{{ ansible_user }}/.config/lvim"
+            state: directory
+            mode: '0755'
+
+        - name: Backup existing config.lua
+          ansible.builtin.copy:
+            src: "/home/{{ ansible_user }}/.config/lvim/config.lua"
+            dest: "/home/{{ ansible_user }}/.config/lvim/config.lua.bak"
+            remote_src: yes
+          ignore_errors: yes
+
+        - name: Link LunarVim config
+          ansible.builtin.file:
+            src: "/home/{{ ansible_user }}/koby-dev-env/configs/LVIMconfig.lua"
+            dest: "/home/{{ ansible_user }}/.config/lvim/config.lua"
+            state: link
+            force: yes
+
+        - name: Ensure custom lua modules directory exists
+          ansible.builtin.file:
+            path: "/home/{{ ansible_user }}/.config/lvim/lua"
+            state: directory
+            mode: '0755'
+
+        - name: Link lua/koby directory
+          ansible.builtin.file:
+            src: "/home/{{ ansible_user }}/koby-dev-env/configs/lua/koby"
+            dest: "/home/{{ ansible_user }}/.config/lvim/lua/koby"
+            state: link
+            force: yes
+
+      tags:
+        - light
+        - lunarvim
+        - lvim
+        - lvim-config
+    ### LunarVim END ###
 
 
     ### TMUX START ###
@@ -242,14 +387,19 @@
       ansible.builtin.package:
         name: tmux
         state: present
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'tmux' in selected_tasks"
+      tags:
+        - light
+        - tmux
 
     - name: Install tpm (tmux plugin manager)
       ansible.builtin.git:
         repo: https://github.com/tmux-plugins/tpm
         dest: "/home/{{ ansible_user }}/.tmux/plugins/tpm"
         update: no
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'tpm' in selected_tasks or 'tmux' in selected_tasks"
+      tags:
+        - light
+        - tmux
+        - tpm
 
     - name: Copy .tmux.conf to home directory
       block:
@@ -265,7 +415,10 @@
             dest: "/home/{{ ansible_user }}/.tmux.conf"
             state: link
             force: yes
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'tmux-copy' in selected_tasks"
+      tags:
+        - light
+        - tmux
+        - tmux-copy
     ### TMUX END ###
 
 
@@ -274,6 +427,9 @@
       ansible.builtin.stat:
         path: /usr/local/bin/pfetch
       register: pfetch_installed
+      tags:
+        - light
+        - pfetch
 
     - name: Install pfetch
       block:
@@ -304,7 +460,9 @@
 
       when: 
         - not pfetch_installed.stat.exists
-        - "'all' in selected_tasks or 'light' in selected_tasks or 'pfetch' in selected_tasks"
+      tags:
+        - light
+        - pfetch
     ### PFETCH END ###
 
 
@@ -313,12 +471,17 @@
       ansible.builtin.shell: curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
       args:
         creates: /usr/local/bin/lazydocker
-      when: "'all' in selected_tasks or 'light' in selected_tasks or 'lazydocker' in selected_tasks"
+      tags:
+        - light
+        - lazydocker
 
     - name: Check if Lazygit is installed
       ansible.builtin.stat:
         path: /usr/local/bin/lazygit
       register: lazygit_installed
+      tags:
+        - light
+        - lazygit
 
     - name: Install Lazygit
       block:
@@ -349,7 +512,9 @@
 
       when: 
         - not lazygit_installed.stat.exists
-        - "'all' in selected_tasks or 'light' in selected_tasks or 'lazygit' in selected_tasks"
+      tags:
+        - light
+        - lazygit
     ### LAZY TOOLING END ###
 
 
@@ -358,40 +523,53 @@
       ansible.builtin.shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       args:
         creates: "/home/{{ ansible_user }}/.cargo/bin/cargo"
-      when: "'all' in selected_tasks or 'cargo' in selected_tasks"
+      tags:
+        - heavy
+        - cargo
 
         #    - name: Install jc
         #      become: yes
         #      ansible.builtin.pip:
         #        name: jc
         #        state: present
-        #      when: "'all' in selected_tasks or 'jc' in selected_tasks"
+        #      tags:
+        #        - heavy
+        #        - jc
         #
         #    - name: Install jq
         #      become: yes
         #      ansible.builtin.package:
         #        name: jq
         #        state: present
-        #      when: "'all' in selected_tasks or 'jq' in selected_tasks"
+        #      tags:
+        #        - heavy
+        #        - jq
 
     - name: Install docker.io
       become: yes
       ansible.builtin.package:
         name: docker.io
         state: present
-      when: "'all' in selected_tasks or 'docker' in selected_tasks"
+      tags:
+        - heavy
+        - docker
 
-    - name: Install docker compose plugin
-      become: yes
-      ansible.builtin.package:
-        name: docker-compose-plugin
-        state: present
-      when: "'all' in selected_tasks or 'docker' in selected_tasks or 'docker-compose' in selected_tasks"
+    # - name: Install docker compose plugin
+    #   become: yes
+    #   ansible.builtin.package:
+    #     name: docker-compose-plugin
+    #     state: present
+    #   tags:
+    #     - heavy
+    #     - docker
+    #     - docker-compose
 
     - name: Install npm
       become: yes
       ansible.builtin.package:
         name: npm
         state: present
-      when: "'all' in selected_tasks or 'npm' in selected_tasks"
+      tags:
+        - heavy
+        - npm
     ### MISC HEAVY END ###
