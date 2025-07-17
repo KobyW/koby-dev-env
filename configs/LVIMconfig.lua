@@ -63,7 +63,6 @@ lvim.plugins = {
     },
     {"windwp/nvim-ts-autotag"},
     {"luckasRanarison/tailwind-tools.nvim"},
-    {"github/copilot.vim"},
 }
 
 -- tailwind-tools config:
@@ -84,8 +83,6 @@ require("tailwind-tools").setup({
  custom_filetypes = {} -- Add any custom filetypes here
 })
 
-vim.g.copilot_no_tab_map = true
-vim.api.nvim_set_keymap("i", "<Tab>", 'copilot#Accept("<CR>")', { silent = true, expr = true })
 
 -- set current clipboard contents to 'p' register
 
