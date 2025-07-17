@@ -92,6 +92,7 @@ edit-machine-specific(){
   fi
 }
 alias ezm=edit-machine-specific
+alias esm=edit-machine-specific
 
 echo -e "${BLUE}Loading misc exports and aliases..${NC}"
 
