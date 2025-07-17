@@ -6,8 +6,12 @@
 #   --tags "zsh,tmux" - Install specific tools only
 #   --skip-tags "heavy" - Install everything except heavy tools
 # By default (no tags specified), all tasks will run
+#
+# Error handling: All tasks will continue on error, with a summary at the end
 - name: Setup Development Environment
   hosts: all
+  gather_facts: yes
+  ignore_errors: yes
   vars:
     # THE PASSED VAULT WILL NEED THE FOLLOWING VARIABLES:
     ansible_user: "{{ vault_ansible_user }}"
