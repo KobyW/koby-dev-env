@@ -167,6 +167,9 @@ unset zshrc_directories
 # delay to check debug messages
 # sleep 6
 
+# pfetch configuration - disable package checking
+export PF_INFO="ascii title os host kernel uptime memory"
+
 clear
 pfetch
 HOSTNAME=$(hostname)
