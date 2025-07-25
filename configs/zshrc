@@ -195,10 +195,10 @@ purge_path_duplicates() {
 purge_path_duplicates
 
 # bun completions
-[ -s "/home/woodk/.bun/_bun" ] && source "/home/woodk/.bun/_bun"
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
-alias claude="/home/woodk/.claude/local/claude"
+alias claude="$HOME/.claude/local/claude"
