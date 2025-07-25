@@ -202,3 +202,10 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 alias claude="$HOME/.claude/local/claude"
+alias desktop="cd /mnt/c/Users/Koby/Desktop"
+alias cdsp="claude --dangerously-skip-permissions"
+alias cdspc="claude --dangerously-skip-permissions --continue"
+
+# Task Master aliases added on 7/21/2025
+alias tm='task-master'
+alias taskmaster='task-master'
