@@ -149,7 +149,7 @@ zshrc_directories=(
     "$HOME/koby-dev-env/util/ssh"
 )
 
-alias claude-init="$HOME/koby-dev-env/util/claude-init.sh"
+alias claude-init="$HOME/koby-dev-env/util/misc/claude-init.sh"
 
 # Loop through each directory and source all .zshrc files
 for dir in $zshrc_directories; do
