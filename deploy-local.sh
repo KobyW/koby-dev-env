@@ -6,19 +6,36 @@
 
 set -e
 
-echo "========================================="
-echo "Koby Dev Environment - Local Deployment"
-echo "========================================="
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+echo -e "${BOLD}${GREEN}██╗  ██╗ ██████╗ ██████╗ ██╗   ██╗${NC}"
+echo -e "${BOLD}${GREEN}██║ ██╔╝██╔═══██╗██╔══██╗╚██╗ ██╔╝${NC}"
+echo -e "${BOLD}${GREEN}█████╔╝ ██║   ██║██████╔╝ ╚████╔╝${NC}"
+echo -e "${BOLD}${GREEN}██╔═██╗ ██║   ██║██╔══██╗  ╚██╔╝${NC}"
+echo -e "${BOLD}${GREEN}██║  ██╗╚██████╔╝██████╔╝   ██║${NC}"
+echo -e "${BOLD}${GREEN}╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝ ${NC}"
+echo -e "${CYAN}=========================================${NC}"
+echo -e "${BOLD}${GREEN}Koby Dev Environment - Local Deployment${NC}"
+
+echo -e "${CYAN}=========================================${NC}"
 echo ""
-echo "This will install the development environment on localhost."
-echo "You will be prompted for your sudo password if needed."
+echo -e "${YELLOW}This will install the development environment on localhost.${NC}"
+echo -e "${YELLOW}You will be prompted for your sudo password if needed.${NC}"
 echo ""
 
 # Check if ansible-playbook is installed
 if ! command -v ansible-playbook &> /dev/null; then
-    echo "Error: ansible-playbook is not installed."
-    echo "Please install ansible first:"
-    echo "  sudo apt-get update && sudo apt-get install ansible"
+    echo -e "${RED}Error: ansible-playbook is not installed.${NC}"
+    echo -e "${YELLOW}Please install ansible first:${NC}"
+    echo -e "${GREEN}  sudo apt-get update && sudo apt-get install ansible${NC}"
     exit 1
 fi
 
@@ -41,32 +58,32 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --help|-h)
-            echo "Usage: $0 [OPTIONS]"
+            echo -e "${BOLD}Usage:${NC} $0 [OPTIONS]"
             echo ""
-            echo "Options:"
-            echo "  --tags TAGS        Only run tasks with specific tags (e.g., 'light' or 'zsh,tmux')"
-            echo "  --skip-tags TAGS   Skip tasks with specific tags (e.g., 'heavy')"
-            echo "  --help, -h         Show this help message"
+            echo -e "${BOLD}Options:${NC}"
+            echo -e "  ${CYAN}--tags TAGS${NC}        Only run tasks with specific tags (e.g., 'light' or 'zsh,tmux')"
+            echo -e "  ${CYAN}--skip-tags TAGS${NC}   Skip tasks with specific tags (e.g., 'heavy')"
+            echo -e "  ${CYAN}--help, -h${NC}         Show this help message"
             echo ""
-            echo "Available tags:"
-            echo "  light    - Install lightweight tools and configs"
-            echo "  heavy    - Install resource-intensive tools (docker, npm, cargo)"
-            echo "  zsh      - Install zsh and oh-my-zsh"
-            echo "  tmux     - Install tmux and configuration"
-            echo "  neovim   - Install Neovim"
-            echo "  lunarvim - Install LunarVim"
-            echo "  p10k     - Install Powerlevel10k theme"
+            echo -e "${BOLD}Available tags:${NC}"
+            echo -e "  ${GREEN}light${NC}    - Install lightweight tools and configs"
+            echo -e "  ${GREEN}heavy${NC}    - Install resource-intensive tools (docker, npm, cargo)"
+            echo -e "  ${GREEN}zsh${NC}      - Install zsh and oh-my-zsh"
+            echo -e "  ${GREEN}tmux${NC}     - Install tmux and configuration"
+            echo -e "  ${GREEN}neovim${NC}   - Install Neovim"
+            echo -e "  ${GREEN}lunarvim${NC} - Install LunarVim"
+            echo -e "  ${GREEN}p10k${NC}     - Install Powerlevel10k theme"
             echo ""
-            echo "Examples:"
-            echo "  $0                       # Install everything"
-            echo "  $0 --tags light          # Install only lightweight tools"
-            echo "  $0 --skip-tags heavy     # Install everything except heavy tools"
-            echo "  $0 --tags zsh,tmux       # Install only zsh and tmux"
+            echo -e "${BOLD}Examples:${NC}"
+            echo -e "  ${BLUE}$0${NC}                       # Install everything"
+            echo -e "  ${BLUE}$0 --tags light${NC}          # Install only lightweight tools"
+            echo -e "  ${BLUE}$0 --skip-tags heavy${NC}     # Install everything except heavy tools"
+            echo -e "  ${BLUE}$0 --tags zsh,tmux${NC}       # Install only zsh and tmux"
             exit 0
             ;;
         *)
-            echo "Unknown option: $1"
-            echo "Use --help for usage information"
+            echo -e "${RED}Unknown option: $1${NC}"
+            echo -e "${YELLOW}Use --help for usage information${NC}"
             exit 1
             ;;
     esac
@@ -81,21 +98,21 @@ CMD="$CMD $TAGS"
 CMD="$CMD $SKIP_TAGS"
 CMD="$CMD $SCRIPT_DIR/deploy.yml"
 
-echo "Running: $CMD"
+echo -e "${CYAN}Running:${NC} ${BOLD}$CMD${NC}"
 echo ""
-echo "Press Ctrl+C to cancel, or Enter to continue..."
+echo -e "${YELLOW}Press Ctrl+C to cancel, or Enter to continue...${NC}"
 read -r
 
 # Execute the playbook
 eval $CMD
 
 echo ""
-echo "========================================="
-echo "Deployment complete!"
-echo "========================================="
+echo -e "${CYAN}=========================================${NC}"
+echo -e "${BOLD}${GREEN}Deployment complete!${NC}"
+echo -e "${CYAN}=========================================${NC}"
 echo ""
-echo "You may need to:"
-echo "1. Log out and log back in for shell changes to take effect"
-echo "2. Open a new terminal to use zsh as your default shell"
-echo "3. Run 'tmux' and press Prefix+I to install tmux plugins"
-echo "4. Run 'lvim' to open LunarVim and let it install plugins"
+echo -e "${BOLD}You may need to:${NC}"
+echo -e "${YELLOW}1.${NC} Log out and log back in for shell changes to take effect"
+echo -e "${YELLOW}2.${NC} Open a new terminal to use zsh as your default shell"
+echo -e "${YELLOW}3.${NC} Run ${GREEN}'tmux'${NC} and press ${GREEN}Prefix+I${NC} to install tmux plugins"
+echo -e "${YELLOW}4.${NC} Run ${GREEN}'lvim'${NC} to open LunarVim and let it install plugins"
