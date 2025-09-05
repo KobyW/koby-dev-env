@@ -1,5 +1,8 @@
 ---
-# Run via ansible-playbook -i <inventory> deploy.yml --extra-vars "@/creds/<vault>.yml" --ask-vault-pass --private-key=<private-key-path>
+# Run remotely via: ansible-playbook -i <inventory> deploy.yml --extra-vars "@/creds/<vault>.yml" --ask-vault-pass --private-key=<private-key-path>
+# Run locally via: ansible-playbook deploy.yml -i localhost, --connection=local --ask-become-pass
+# Or use helper script: ./deploy-local.sh
+#
 # Use tags to control which tasks run:
 #   --tags "light" - Install lightweight tools and configs
 #   --tags "heavy" - Install resource-intensive tools
@@ -13,9 +16,12 @@
   gather_facts: yes
   ignore_errors: yes
   vars:
-    # THE PASSED VAULT WILL NEED THE FOLLOWING VARIABLES:
-    ansible_user: "{{ vault_ansible_user }}"
-    ansible_sudo_pass: "{{ vault_sudo_pass }}"
+    # Set ansible_user based on whether we're running locally or remotely
+    # For localhost, use the current user; for remote, use vault variables
+    ansible_user: "{{ vault_ansible_user | default(lookup('env', 'USER')) }}"
+    ansible_sudo_pass: "{{ vault_sudo_pass | default(omit) }}"
+    # Automatically detect localhost and set connection appropriately
+    ansible_connection: "{{ 'local' if inventory_hostname in ['localhost', '127.0.0.1'] else 'ssh' }}"
 
 
   tasks:
@@ -40,7 +46,7 @@
     - name: Clone koby-dev-env repository
       ansible.builtin.git:
         repo: https://github.com/KobyW/koby-dev-env
-        dest: "/home/{{ ansible_user }}/koby-dev-env"
+        dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env"
         version: main
         update: no
       tags:
@@ -49,7 +55,7 @@
     - name: Sync koby-dev-env repository
       ansible.builtin.git:
         repo: https://github.com/KobyW/koby-dev-env
-        dest: "/home/{{ ansible_user }}/koby-dev-env"
+        dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env"
         version: main
         update: yes
       tags:
@@ -111,7 +117,7 @@
     - name: Install zoxide
       ansible.builtin.shell: curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
       args:
-        creates: "/home/{{ ansible_user }}/.local/bin/zoxide"
+        creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/zoxide"
       tags:
         - light
         - zoxide
@@ -157,7 +163,7 @@
 
     - name: Check if Oh My Zsh is installed
       ansible.builtin.stat:
-        path: "/home/{{ ansible_user }}/.oh-my-zsh"
+        path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.oh-my-zsh"
       register: oh_my_zsh_installed
       tags:
         - light
@@ -176,7 +182,7 @@
     - name: Install zsh-autosuggestions
       ansible.builtin.git:
         repo: https://github.com/zsh-users/zsh-autosuggestions
-        dest: "/home/{{ ansible_user }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+        dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
         update: no
       tags:
         - light
@@ -188,15 +194,15 @@
 
         - name: Backup existing .zshrc
           ansible.builtin.copy:
-            src: "/home/{{ ansible_user }}/.zshrc"
-            dest: "/home/{{ ansible_user }}/.zshrc.bak"
+            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.zshrc"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.zshrc.bak"
             remote_src: yes
           ignore_errors: yes
 
         - name: Link .zshrc
           ansible.builtin.file:
-            src: "/home/{{ ansible_user }}/koby-dev-env/configs/zshrc"
-            dest: "/home/{{ ansible_user }}/.zshrc"
+            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env/configs/zshrc"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.zshrc"
             state: link
             force: yes
 
@@ -217,7 +223,7 @@
 
     - name: Export SHELL environment variable
       ansible.builtin.lineinfile:
-        path: "/home/{{ ansible_user }}/.bashrc"
+        path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.bashrc"
         line: 'export SHELL=/bin/zsh'
         create: yes
       tags:
@@ -234,21 +240,21 @@
         - name: Clone Powerlevel10k repository
           ansible.builtin.git:
             repo: 'https://github.com/romkatv/powerlevel10k.git'
-              #dest: "/home/{{ ansible_user }}/.oh-my-zsh/custom/themes/powerlevel10k"
-            dest: "/home/{{ ansible_user }}/powerlevel10k"
+              #dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.oh-my-zsh/custom/themes/powerlevel10k"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/powerlevel10k"
             depth: 1
 
         - name: Backup existing p10k.zsh
           ansible.builtin.copy:
-            src: "/home/{{ ansible_user }}/.p10k.zsh"
-            dest: "/home/{{ ansible_user }}/.p10k.zsh.bak"
+            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.p10k.zsh"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.p10k.zsh.bak"
             remote_src: yes
           ignore_errors: yes
 
         - name: Link p10k.zsh
           ansible.builtin.file:
-            src: "/home/{{ ansible_user }}/koby-dev-env/configs/p10k.zsh"
-            dest: "/home/{{ ansible_user }}/.p10k.zsh"
+            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env/configs/p10k.zsh"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.p10k.zsh"
             state: link
             force: yes
 
@@ -261,7 +267,7 @@
     ### NeoVim START ###
     - name: Check if Neovim is installed
       ansible.builtin.stat:
-        path: "/home/{{ ansible_user }}/.local/bin/nvim"
+        path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/nvim"
       register: neovim_installed
       tags:
         - light
@@ -272,7 +278,7 @@
 
         - name: Ensure /usr/.local/bin directory exists
           ansible.builtin.file:
-            path: "/home/{{ ansible_user }}/.local/bin"
+            path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin"
             state: directory
             mode: '0755'
 
@@ -285,7 +291,7 @@
           become: yes
           ansible.builtin.unarchive:
             src: /tmp/nvim-linux64.tar.gz
-            dest: "/home/{{ ansible_user }}/.local/bin/"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/"
             remote_src: yes
 
         - name: Remove Neovim archive
@@ -296,7 +302,7 @@
         - name: Link Neovim to /usr/local/bin
           become: yes
           ansible.builtin.file:
-            src: "/home/{{ ansible_user }}/.local/bin/nvim-linux64/bin/nvim"
+            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/nvim-linux64/bin/nvim"
             dest: "/usr/local/bin/nvim"
             state: link
             force: yes
@@ -304,7 +310,7 @@
         - name: Ensure NeoVim is exported to PATH via zshrc
           become: yes
           ansible.builtin.lineinfile:
-            path: "/home/{{ ansible_user }}/.zshrc"
+            path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.zshrc"
             line: 'export PATH="/usr/local/nvim-linux64/bin:$PATH"'
 
       when: 
@@ -318,7 +324,7 @@
     ### LunarVim START ###
     - name: Check if LunarVim is installed
       ansible.builtin.stat:
-        path: "/home/{{ ansible_user }}/.local/bin/lvim"
+        path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/lvim"
       register: lunarvim_installed
       tags:
         - light
@@ -333,7 +339,7 @@
           environment:
             LV_BRANCH: "release-1.4/neovim-0.9"
           args:
-            creates: "/home/{{ ansible_user }}/.local/bin/lvim"
+            creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/lvim"
 
       when: 
         - not lunarvim_installed.stat.exists
@@ -346,34 +352,34 @@
       block:
         - name: Ensure LunarVim config directory exists
           ansible.builtin.file:
-            path: "/home/{{ ansible_user }}/.config/lvim"
+            path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim"
             state: directory
             mode: '0755'
 
         - name: Backup existing config.lua
           ansible.builtin.copy:
-            src: "/home/{{ ansible_user }}/.config/lvim/config.lua"
-            dest: "/home/{{ ansible_user }}/.config/lvim/config.lua.bak"
+            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim/config.lua"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim/config.lua.bak"
             remote_src: yes
           ignore_errors: yes
 
         - name: Link LunarVim config
           ansible.builtin.file:
-            src: "/home/{{ ansible_user }}/koby-dev-env/configs/LVIMconfig.lua"
-            dest: "/home/{{ ansible_user }}/.config/lvim/config.lua"
+            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env/configs/LVIMconfig.lua"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim/config.lua"
             state: link
             force: yes
 
         - name: Ensure custom lua modules directory exists
           ansible.builtin.file:
-            path: "/home/{{ ansible_user }}/.config/lvim/lua"
+            path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim/lua"
             state: directory
             mode: '0755'
 
         - name: Link lua/koby directory
           ansible.builtin.file:
-            src: "/home/{{ ansible_user }}/koby-dev-env/configs/lua/koby"
-            dest: "/home/{{ ansible_user }}/.config/lvim/lua/koby"
+            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env/configs/lua/koby"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim/lua/koby"
             state: link
             force: yes
 
@@ -398,7 +404,7 @@
     - name: Install tpm (tmux plugin manager)
       ansible.builtin.git:
         repo: https://github.com/tmux-plugins/tpm
-        dest: "/home/{{ ansible_user }}/.tmux/plugins/tpm"
+        dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.tmux/plugins/tpm"
         update: no
       tags:
         - light
@@ -409,14 +415,14 @@
       block:
         - name: Backup existing .tmux.conf
           ansible.builtin.copy:
-            src: "/home/{{ ansible_user }}/.tmux.conf"
-            dest: "/home/{{ ansible_user }}/.tmux.conf.bak"
+            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.tmux.conf"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.tmux.conf.bak"
             remote_src: yes
           ignore_errors: yes
         - name: Link .tmux.conf
           ansible.builtin.file:
-            src: "/home/{{ ansible_user }}/koby-dev-env/configs/tmux.conf"
-            dest: "/home/{{ ansible_user }}/.tmux.conf"
+            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env/configs/tmux.conf"
+            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.tmux.conf"
             state: link
             force: yes
       tags:
@@ -526,7 +532,7 @@
     - name: Install cargo
       ansible.builtin.shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       args:
-        creates: "/home/{{ ansible_user }}/.cargo/bin/cargo"
+        creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.cargo/bin/cargo"
       tags:
         - heavy
         - cargo
