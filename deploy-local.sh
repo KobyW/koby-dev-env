@@ -16,12 +16,13 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
-echo -e "${BOLD}${GREEN}██╗  ██╗ ██████╗ ██████╗ ██╗   ██╗${NC}"
-echo -e "${BOLD}${GREEN}██║ ██╔╝██╔═══██╗██╔══██╗╚██╗ ██╔╝${NC}"
-echo -e "${BOLD}${GREEN}█████╔╝ ██║   ██║██████╔╝ ╚████╔╝${NC}"
-echo -e "${BOLD}${GREEN}██╔═██╗ ██║   ██║██╔══██╗  ╚██╔╝${NC}"
-echo -e "${BOLD}${GREEN}██║  ██╗╚██████╔╝██████╔╝   ██║${NC}"
-echo -e "${BOLD}${GREEN}╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝ ${NC}"
+echo ""
+echo -e "${BOLD}${YELLOW}██╗  ██╗ ██████╗ ██████╗ ██╗   ██╗${NC}"
+echo -e "${BOLD}${YELLOW}██║ ██╔╝██╔═══██╗██╔══██╗╚██╗ ██╔╝${NC}"
+echo -e "${BOLD}${YELLOW}█████╔╝ ██║   ██║██████╔╝ ╚████╔╝${NC}"
+echo -e "${BOLD}${YELLOW}██╔═██╗ ██║   ██║██╔══██╗  ╚██╔╝${NC}"
+echo -e "${BOLD}${YELLOW}██║  ██╗╚██████╔╝██████╔╝   ██║${NC}"
+echo -e "${BOLD}${YELLOW}╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝ ${NC}"
 echo -e "${CYAN}=========================================${NC}"
 echo -e "${BOLD}${GREEN}Koby Dev Environment - Local Deployment${NC}"
 
