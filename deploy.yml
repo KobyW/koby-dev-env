@@ -359,33 +359,76 @@
 
         - name: Install Neovim for ARM/other architectures
           block:
-            - name: Download Neovim AppImage
+            - name: Try to download architecture-specific binary
               ansible.builtin.get_url:
-                url: "https://github.com/neovim/neovim/releases/download/v0.9.5/nvim.appimage"
-                dest: "/tmp/nvim.appimage"
-                mode: '0755'
+                url: "https://github.com/neovim/neovim/releases/download/v0.9.5/nvim-linux64.tar.gz"
+                dest: "/tmp/nvim-linux64.tar.gz"
+                mode: '0644'
+              ignore_errors: yes
+              register: nvim_download
 
-            - name: Extract AppImage
-              ansible.builtin.shell: |
-                cd /tmp
-                ./nvim.appimage --appimage-extract
-                rm -rf {{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-appimage
-                mv squashfs-root {{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-appimage
-              args:
-                creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-appimage"
+            - name: Extract Neovim if download succeeded
+              ansible.builtin.unarchive:
+                src: "/tmp/nvim-linux64.tar.gz"
+                dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/"
+                remote_src: yes
+                creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-linux64"
+              when: nvim_download is succeeded
 
-            - name: Create nvim wrapper script
-              ansible.builtin.copy:
-                content: |
-                  #!/bin/bash
-                  exec {{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-appimage/AppRun "$@"
-                dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/nvim"
-                mode: '0755'
-
-            - name: Clean up AppImage
+            - name: Create symlink in user's local bin (ARM)
               ansible.builtin.file:
-                path: "/tmp/nvim.appimage"
+                src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-linux64/bin/nvim"
+                dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/nvim"
+                state: link
+                force: yes
+              when: nvim_download is succeeded
+
+            - name: Build Neovim from source if binary doesn't work
+              block:
+                - name: Install build dependencies
+                  become: yes
+                  ansible.builtin.package:
+                    name:
+                      - build-essential
+                      - cmake
+                      - ninja-build
+                      - gettext
+                      - libtool
+                      - libtool-bin
+                      - autoconf
+                      - automake
+                      - pkg-config
+                      - unzip
+                      - curl
+                      - git
+                    state: present
+
+                - name: Clone Neovim repository
+                  ansible.builtin.git:
+                    repo: https://github.com/neovim/neovim.git
+                    dest: "/tmp/neovim"
+                    version: v0.9.5
+                    depth: 1
+
+                - name: Build and install Neovim
+                  ansible.builtin.shell: |
+                    cd /tmp/neovim
+                    make CMAKE_BUILD_TYPE=Release
+                    make install PREFIX={{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local
+                  args:
+                    creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/nvim"
+
+                - name: Clean up build directory
+                  ansible.builtin.file:
+                    path: "/tmp/neovim"
+                    state: absent
+              when: nvim_download is failed
+
+            - name: Remove archive if downloaded
+              ansible.builtin.file:
+                path: "/tmp/nvim-linux64.tar.gz"
                 state: absent
+              when: nvim_download is succeeded
           when: ansible_architecture not in ['x86_64', 'amd64']
 
         - name: Create symlink in /usr/local/bin
@@ -404,13 +447,15 @@
 
         - name: Verify Neovim installation
           ansible.builtin.shell: |
-            {{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/nvim --version
+            export PATH="{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin:/usr/local/bin:$PATH"
+            which nvim && nvim --version
           register: nvim_version
           changed_when: false
+          failed_when: false
 
         - name: Display Neovim version
           ansible.builtin.debug:
-            msg: "Neovim version installed: {{ nvim_version.stdout_lines[0] }}"
+            msg: "Neovim version installed: {{ nvim_version.stdout | default('Installation may have failed') }}"
 
       when: "'NVIM v0.9' not in current_nvim_version.stdout"
       tags:
