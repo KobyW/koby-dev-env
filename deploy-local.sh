@@ -46,6 +46,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Default to all tags
 TAGS=""
 SKIP_TAGS=""
+VERBOSITY=""
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -58,12 +59,17 @@ while [[ $# -gt 0 ]]; do
             SKIP_TAGS="--skip-tags $2"
             shift 2
             ;;
+        -v|-vv|-vvv|-vvvv)
+            VERBOSITY="$1"
+            shift
+            ;;
         --help|-h)
             echo -e "${BOLD}Usage:${NC} $0 [OPTIONS]"
             echo ""
             echo -e "${BOLD}Options:${NC}"
             echo -e "  ${CYAN}--tags TAGS${NC}        Only run tasks with specific tags (e.g., 'light' or 'zsh,tmux')"
             echo -e "  ${CYAN}--skip-tags TAGS${NC}   Skip tasks with specific tags (e.g., 'heavy')"
+            echo -e "  ${CYAN}-v, -vv, -vvv, -vvvv${NC}  Increase verbosity of ansible output"
             echo -e "  ${CYAN}--help, -h${NC}         Show this help message"
             echo ""
             echo -e "${BOLD}Available tags:${NC}"
@@ -80,6 +86,8 @@ while [[ $# -gt 0 ]]; do
             echo -e "  ${BLUE}$0 --tags light${NC}          # Install only lightweight tools"
             echo -e "  ${BLUE}$0 --skip-tags heavy${NC}     # Install everything except heavy tools"
             echo -e "  ${BLUE}$0 --tags zsh,tmux${NC}       # Install only zsh and tmux"
+            echo -e "  ${BLUE}$0 -vv${NC}                    # Install everything with verbose output"
+            echo -e "  ${BLUE}$0 --tags lunarvim -vvv${NC}  # Debug lunarvim installation"
             exit 0
             ;;
         *)
@@ -95,6 +103,7 @@ CMD="ansible-playbook"
 CMD="$CMD -i localhost,"
 CMD="$CMD --connection=local"
 CMD="$CMD --ask-become-pass"
+CMD="$CMD $VERBOSITY"
 CMD="$CMD $TAGS"
 CMD="$CMD $SKIP_TAGS"
 CMD="$CMD $SCRIPT_DIR/deploy.yml"
