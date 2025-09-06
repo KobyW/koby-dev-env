@@ -66,22 +66,26 @@ lvim.plugins = {
 }
 
 -- tailwind-tools config:
-require("tailwind-tools").setup({
- document_color = {
-    enabled = true,
-    kind = "inline",
-    inline_symbol = "󰝤 ",
-    debounce = 200,
- },
- conceal = {
-    enabled = false,
-    symbol = "󱏿",
-    highlight = {
-      fg = "#38BDF8",
-    },
- },
- custom_filetypes = {} -- Add any custom filetypes here
-})
+-- Wrapped in pcall to prevent errors if plugin is not yet installed
+local status_ok, tailwind_tools = pcall(require, "tailwind-tools")
+if status_ok then
+  tailwind_tools.setup({
+   document_color = {
+      enabled = true,
+      kind = "inline",
+      inline_symbol = "󰝤 ",
+      debounce = 200,
+   },
+   conceal = {
+      enabled = false,
+      symbol = "󱏿",
+      highlight = {
+        fg = "#38BDF8",
+      },
+   },
+   custom_filetypes = {} -- Add any custom filetypes here
+  })
+end
 
 
 -- set current clipboard contents to 'p' register
