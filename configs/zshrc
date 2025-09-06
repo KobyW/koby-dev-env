@@ -209,3 +209,9 @@ alias cdspc="claude --dangerously-skip-permissions --continue"
 # Task Master aliases added on 7/21/2025
 alias tm='task-master'
 alias taskmaster='task-master'
+
+#`export LINTER_TYPE=eslint
+
+# Fix for Playwright/Chrome timeout in WSL2
+unset DISPLAY
+export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
