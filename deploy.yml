@@ -399,7 +399,7 @@
         - name: Add Neovim to PATH in zshrc
           ansible.builtin.lineinfile:
             path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.zshrc"
-            line: 'export PATH="{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin:$PATH"'
+            line: "export PATH=\"{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin:$PATH\""
             create: yes
 
         - name: Verify Neovim installation
