@@ -658,24 +658,6 @@
         - heavy
         - cargo
 
-        #    - name: Install jc
-        #      become: yes
-        #      ansible.builtin.pip:
-        #        name: jc
-        #        state: present
-        #      tags:
-        #        - heavy
-        #        - jc
-        #
-        #    - name: Install jq
-        #      become: yes
-        #      ansible.builtin.package:
-        #        name: jq
-        #        state: present
-        #      tags:
-        #        - heavy
-        #        - jq
-
     - name: Install docker.io
       become: yes
       ansible.builtin.package:
@@ -684,16 +666,6 @@
       tags:
         - heavy
         - docker
-
-    # - name: Install docker compose plugin
-    #   become: yes
-    #   ansible.builtin.package:
-    #     name: docker-compose-plugin
-    #     state: present
-    #   tags:
-    #     - heavy
-    #     - docker
-    #     - docker-compose
 
     - name: Install npm
       become: yes
