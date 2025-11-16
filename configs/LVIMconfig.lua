@@ -3,6 +3,25 @@
 -- Forum: https://www.reddit.com/r/lunarvim/
 -- Discord: https://discord.com/invite/Xb9B4Ny
 
+-- Shim for older Neovim (<0.10) so plugins using vim.lsp.get_clients work
+if not vim.lsp.get_clients and vim.lsp.get_active_clients then
+  vim.lsp.get_clients = function(opts)
+    opts = opts or {}
+    local bufnr = opts.bufnr
+    local clients = vim.lsp.get_active_clients()
+    if not bufnr then
+      return clients
+    end
+    local filtered = {}
+    for _, c in ipairs(clients) do
+      if c.attached_buffers and c.attached_buffers[bufnr] then
+        table.insert(filtered, c)
+      end
+    end
+    return filtered
+  end
+end
+
 -- Set default file format to Unix (LF)
 vim.opt.fileformat = "unix"
 
