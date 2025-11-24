@@ -86,6 +86,66 @@ ssh-create-key() {
     fi
 }
 
+##### Start ssh-agent and add a key ####
+ssh-agent-add() {
+    # Check if ssh-agent is already running
+    if [ -z "$SSH_AUTH_SOCK" ] || ! ssh-add -l &>/dev/null; then
+        echo -e "${YELLOW}Starting ssh-agent...${NC}"
+        eval "$(ssh-agent -s)"
+    else
+        echo -e "${GREEN}ssh-agent is already running (PID: $SSH_AGENT_PID)${NC}"
+        echo -e "${CYAN}Currently loaded keys:${NC}"
+        ssh-add -l 2>/dev/null || echo "  (none)"
+        echo ""
+    fi
+
+    # List private keys in ~/.ssh (exclude .pub files, known_hosts, config, etc.)
+    echo -e "${CYAN}Available SSH keys in ~/.ssh:${NC}"
+    echo "-----------------------------------"
+    local keys=()
+    local i=1
+    for f in ~/.ssh/*; do
+        # Skip non-files
+        [[ ! -f "$f" ]] && continue
+        # Skip .pub files, known_hosts, config, authorized_keys
+        [[ "$f" == *.pub ]] && continue
+        [[ "$(basename "$f")" == "known_hosts"* ]] && continue
+        [[ "$(basename "$f")" == "config" ]] && continue
+        [[ "$(basename "$f")" == "authorized_keys" ]] && continue
+        keys+=("$f")
+        echo "  $i) $(basename "$f")"
+        ((i++))
+    done
+    echo "-----------------------------------"
+
+    if [[ ${#keys[@]} -eq 0 ]]; then
+        echo -e "${RED}No private keys found in ~/.ssh${NC}"
+        return 1
+    fi
+
+    # Ask user which key to add
+    echo -n "Enter the number of the key to add (or 'q' to quit): "
+    read choice
+
+    if [[ "$choice" == "q" ]]; then
+        echo "Cancelled."
+        return 0
+    fi
+
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le ${#keys[@]} ]]; then
+        local selected_key="${keys[$choice]}"
+        echo -e "${YELLOW}Adding key: $selected_key${NC}"
+        ssh-add "$selected_key"
+        echo ""
+        echo -e "${GREEN}Currently loaded keys:${NC}"
+        ssh-add -l
+    else
+        echo -e "${RED}Invalid selection.${NC}"
+        return 1
+    fi
+}
+alias ssa=ssh-agent-add
+
 ##### Send one or more SSH key to other server(s) ####
 function sendsshkeys() {
     local default_path="$HOME/.ssh"
