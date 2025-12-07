@@ -72,16 +72,25 @@ vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter", "FileType"}, {
 })
 
 lvim.plugins = {
-    -- Ensure nui.nvim is added before noice.nvim
-    {"MunifTanjim/nui.nvim"},
-    {"folke/noice.nvim",
-        requires = "MunifTanjim/nui.nvim",
-        config = function()
-            require("noice").setup()
-        end
-    },
-    {"windwp/nvim-ts-autotag"},
-    {"luckasRanarison/tailwind-tools.nvim"},
+  { "MunifTanjim/nui.nvim" },
+
+  {
+    "folke/noice.nvim",
+    requires = "MunifTanjim/nui.nvim",
+    config = function()
+      require("noice").setup({
+        lsp = {
+          signature = {
+            enabled = false,
+            auto_open = { enabled = false },
+          },
+        },
+      })
+    end,
+  },
+
+  { "windwp/nvim-ts-autotag" },
+  { "LuckasRanarison/tailwind-tools.nvim" },
 }
 
 -- tailwind-tools config:
