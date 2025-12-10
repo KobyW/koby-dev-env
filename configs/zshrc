@@ -95,6 +95,8 @@ alias ezm=edit-machine-specific
 alias ezms=edit-machine-specific
 alias esm=edit-machine-specific
 
+alias tmxu=tmux
+
 echo -e "${BLUE}Loading misc exports and aliases..${NC}"
 
 export EDITOR='vim'
