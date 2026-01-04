@@ -232,3 +232,7 @@ alias taskmaster='task-master'
 # Fix for Playwright/Chrome timeout in WSL2
 unset DISPLAY
 export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
+
+# qlty
+export QLTY_INSTALL="$HOME/.qlty"
+export PATH="$QLTY_INSTALL/bin:$PATH"
