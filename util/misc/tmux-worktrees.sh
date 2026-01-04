@@ -172,6 +172,10 @@ if [[ "$DRY_RUN" == true ]]; then
     exit 0
 fi
 
+# Get tmux base indices (respect user's config)
+PANE_BASE=$(tmux show-options -gv pane-base-index 2>/dev/null || echo 0)
+WINDOW_BASE=$(tmux show-options -gv base-index 2>/dev/null || echo 0)
+
 # Create the session with first directory
 FIRST_DIR="${DIRS[0]}"
 FIRST_NAME="$(basename "$FIRST_DIR")"
@@ -184,29 +188,34 @@ setup_panes() {
     local dir="$1"
     local window="$2"
 
+    # Calculate pane indices based on configured base
+    local pane_top=$PANE_BASE
+    local pane_bl=$((PANE_BASE + 1))
+    local pane_br=$((PANE_BASE + 2))
+
     # Split horizontally (creates bottom pane)
     tmux split-window -t "$SESSION_NAME:$window" -v -c "$dir"
 
     # Split bottom pane vertically (creates bottom-right)
-    tmux split-window -t "$SESSION_NAME:$window.1" -h -c "$dir"
+    tmux split-window -t "$SESSION_NAME:$window.$pane_bl" -h -c "$dir"
 
     # Run commands if specified
-    # Pane 0 = top, Pane 1 = bottom-left, Pane 2 = bottom-right
+    # pane_top = top, pane_bl = bottom-left, pane_br = bottom-right
 
     if [[ -n "$TOP_CMD" ]]; then
-        tmux send-keys -t "$SESSION_NAME:$window.0" "$TOP_CMD" Enter
+        tmux send-keys -t "$SESSION_NAME:$window.$pane_top" "$TOP_CMD" Enter
     fi
 
     if [[ -n "$BOTTOM_LEFT_CMD" ]]; then
-        tmux send-keys -t "$SESSION_NAME:$window.1" "$BOTTOM_LEFT_CMD" Enter
+        tmux send-keys -t "$SESSION_NAME:$window.$pane_bl" "$BOTTOM_LEFT_CMD" Enter
     fi
 
     if [[ -n "$BOTTOM_RIGHT_CMD" ]]; then
-        tmux send-keys -t "$SESSION_NAME:$window.2" "$BOTTOM_RIGHT_CMD" Enter
+        tmux send-keys -t "$SESSION_NAME:$window.$pane_br" "$BOTTOM_RIGHT_CMD" Enter
     fi
 
     # Select top pane as active
-    tmux select-pane -t "$SESSION_NAME:$window.0"
+    tmux select-pane -t "$SESSION_NAME:$window.$pane_top"
 }
 
 # Setup panes for first window
@@ -224,7 +233,7 @@ for ((i = 1; i < ${#DIRS[@]}; i++)); do
 done
 
 # Select first window
-tmux select-window -t "$SESSION_NAME:0"
+tmux select-window -t "$SESSION_NAME:$WINDOW_BASE"
 
 log_success "Session '$SESSION_NAME' created with ${#DIRS[@]} windows"
 echo ""
