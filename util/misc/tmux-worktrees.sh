@@ -19,6 +19,8 @@ TOP_CMD=""
 BOTTOM_LEFT_CMD=""
 BOTTOM_RIGHT_CMD="lazygit"
 DRY_RUN=false
+INTERACTIVE=false
+SELECT_ALL=true  # Default: select all directories
 
 # Colors for output
 RED='\033[0;31m'
@@ -40,11 +42,15 @@ OPTIONS:
     -t, --top-cmd CMD       Command to run in top pane (default: none)
     -l, --bottom-left CMD   Command to run in bottom-left pane (default: none)
     -r, --bottom-right CMD  Command to run in bottom-right pane (default: lazygit)
+    -i, --interactive       Interactively select which directories to include
+                            (Space to toggle, Enter to confirm)
+    -a, --all               Select all directories (default behavior)
     -n, --dry-run           Show what would be done without executing
     -h, --help              Show this help message
 
 EXAMPLES:
     $(basename "$0")
+    $(basename "$0") -i                    # Interactive selection
     $(basename "$0") --top-cmd "nvim ." --bottom-left "npm run dev"
     $(basename "$0") -d ~/projects -s myprojects --dry-run
 EOF
@@ -69,6 +75,131 @@ log_error() {
 
 log_dry() {
     echo -e "${YELLOW}[DRY-RUN]${NC} $1"
+}
+
+# Interactive directory selector
+# Uses terminal escape codes for a checkbox UI
+# Space toggles selection, Enter confirms, q quits
+interactive_select() {
+    local -n items=$1      # Array of items (passed by reference)
+    local -n selected=$2   # Array to store selection state (passed by reference)
+    local cursor=0
+    local num_items=${#items[@]}
+
+    # Initialize all as unselected
+    for ((i = 0; i < num_items; i++)); do
+        selected[$i]=0
+    done
+
+    # Hide cursor and save terminal state
+    tput civis
+    trap 'tput cnorm; stty echo' EXIT
+
+    # Disable echo for key reading
+    stty -echo
+
+    draw_menu() {
+        # Move cursor to start and clear
+        tput cup 0 0
+        echo -e "${BLUE}Select directories (Space=toggle, Enter=confirm, a=all, n=none, q=quit):${NC}"
+        echo ""
+        for ((i = 0; i < num_items; i++)); do
+            local prefix="  "
+            local checkbox="[ ]"
+            if [[ ${selected[$i]} -eq 1 ]]; then
+                checkbox="[${GREEN}✓${NC}]"
+            fi
+            if [[ $i -eq $cursor ]]; then
+                prefix="${YELLOW}▸${NC} "
+            fi
+            printf "  %b%b %s\n" "$prefix" "$checkbox" "$(basename "${items[$i]}")"
+        done
+        echo ""
+
+        # Count selected
+        local count=0
+        for ((i = 0; i < num_items; i++)); do
+            [[ ${selected[$i]} -eq 1 ]] && ((count++))
+        done
+        echo -e "  ${BLUE}$count of $num_items selected${NC}"
+        tput el  # Clear to end of line
+    }
+
+    # Clear screen and draw initial menu
+    clear
+    draw_menu
+
+    # Read keys
+    while true; do
+        # Read single character
+        IFS= read -rsn1 key
+
+        case "$key" in
+            # Arrow keys send escape sequences
+            $'\x1b')
+                read -rsn2 -t 0.1 key
+                case "$key" in
+                    '[A') # Up arrow
+                        ((cursor > 0)) && ((cursor--))
+                        ;;
+                    '[B') # Down arrow
+                        ((cursor < num_items - 1)) && ((cursor++))
+                        ;;
+                esac
+                ;;
+            ' ') # Space - toggle selection
+                if [[ ${selected[$cursor]} -eq 1 ]]; then
+                    selected[$cursor]=0
+                else
+                    selected[$cursor]=1
+                fi
+                ;;
+            'j') # vim down
+                ((cursor < num_items - 1)) && ((cursor++))
+                ;;
+            'k') # vim up
+                ((cursor > 0)) && ((cursor--))
+                ;;
+            'a') # Select all
+                for ((i = 0; i < num_items; i++)); do
+                    selected[$i]=1
+                done
+                ;;
+            'n') # Select none
+                for ((i = 0; i < num_items; i++)); do
+                    selected[$i]=0
+                done
+                ;;
+            'q') # Quit
+                tput cnorm
+                stty echo
+                clear
+                log_info "Selection cancelled"
+                exit 0
+                ;;
+            '') # Enter - confirm selection
+                # Check if at least one selected
+                local has_selection=0
+                for ((i = 0; i < num_items; i++)); do
+                    [[ ${selected[$i]} -eq 1 ]] && has_selection=1 && break
+                done
+                if [[ $has_selection -eq 0 ]]; then
+                    # Flash message
+                    tput cup $((num_items + 4)) 0
+                    echo -e "  ${RED}Please select at least one directory${NC}"
+                    sleep 1
+                else
+                    break
+                fi
+                ;;
+        esac
+        draw_menu
+    done
+
+    # Restore terminal
+    tput cnorm
+    stty echo
+    clear
 }
 
 # Parse arguments
@@ -99,6 +230,16 @@ while [[ $# -gt 0 ]]; do
             DRY_RUN=true
             shift
             ;;
+        -i|--interactive)
+            INTERACTIVE=true
+            SELECT_ALL=false
+            shift
+            ;;
+        -a|--all)
+            SELECT_ALL=true
+            INTERACTIVE=false
+            shift
+            ;;
         -h|--help)
             usage
             ;;
@@ -122,6 +263,28 @@ if [[ ${#DIRS[@]} -eq 0 ]]; then
 fi
 
 log_info "Found ${#DIRS[@]} directories in $BASE_DIR"
+
+# Interactive selection if requested
+if [[ "$INTERACTIVE" == true ]]; then
+    declare -a SELECTION_STATE
+    interactive_select DIRS SELECTION_STATE
+
+    # Filter DIRS to only selected items
+    declare -a SELECTED_DIRS
+    for ((i = 0; i < ${#DIRS[@]}; i++)); do
+        if [[ ${SELECTION_STATE[$i]} -eq 1 ]]; then
+            SELECTED_DIRS+=("${DIRS[$i]}")
+        fi
+    done
+    DIRS=("${SELECTED_DIRS[@]}")
+
+    if [[ ${#DIRS[@]} -eq 0 ]]; then
+        log_error "No directories selected"
+        exit 1
+    fi
+
+    log_info "Selected ${#DIRS[@]} directories"
+fi
 
 # Check if session name is taken
 if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
