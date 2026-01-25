@@ -236,3 +236,9 @@ export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
 # qlty
 export QLTY_INSTALL="$HOME/.qlty"
 export PATH="$QLTY_INSTALL/bin:$PATH"
+
+# Continuous-Claude OPC directory (for skills to find scripts)
+export CLAUDE_OPC_DIR="/home/woodk/continuous-claude/opc"
+
+# Elan (Lean version manager)
+[ -f "$HOME/.elan/env" ] && source "$HOME/.elan/env"
