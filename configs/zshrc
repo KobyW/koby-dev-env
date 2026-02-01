@@ -94,6 +94,7 @@ edit-machine-specific(){
 alias ezm=edit-machine-specific
 alias ezms=edit-machine-specific
 alias esm=edit-machine-specific
+alias ems=edit-machine-specific
 
 alias koby="cd $HOME/koby-dev-env/ && ls"
 
