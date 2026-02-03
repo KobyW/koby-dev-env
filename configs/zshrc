@@ -246,8 +246,8 @@ export CLAUDE_OPC_DIR="/home/woodk/continuous-claude/opc"
 # Elan (Lean version manager)
 [ -f "$HOME/.elan/env" ] && source "$HOME/.elan/env"
 
-# java path - install using sudo apt update && sudo apt install -y openjdk-17-jdk
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+# java path - install using sudo apt update && sudo apt install -y openjdk-21-jdk
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 
 # Android Studio (WSL2 → Windows)
 export CAPACITOR_ANDROID_STUDIO_PATH="/mnt/c/Program Files/Android/Android Studio/bin/studio64.exe"
