@@ -10,6 +10,10 @@
 #   --skip-tags "heavy" - Install everything except heavy tools
 # By default (no tags specified), all tasks will run
 #
+# Prerequisites:
+#   - macOS: brew must be installed (https://brew.sh)
+#   - macOS: ansible-galaxy collection install community.general
+#
 # Error handling: All tasks will continue on error, with a summary at the end
 - name: Setup Development Environment
   hosts: all
@@ -23,30 +27,115 @@
     # Automatically detect localhost and set connection appropriately
     ansible_connection: "{{ 'local' if inventory_hostname in ['localhost', '127.0.0.1'] else 'ssh' }}"
 
+    # OS detection
+    is_macos: "{{ ansible_system == 'Darwin' }}"
+    is_linux: "{{ ansible_system == 'Linux' }}"
+    home_dir: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}"
+    brew_prefix: "{{ '/opt/homebrew' if ansible_architecture == 'arm64' else '/usr/local' }}"
+
+    # Package lists per OS
+    linux_base_packages:
+      - git
+      - curl
+      - python3-pip
+      - build-essential
+      - net-tools
+      - nmap
+      - unzip
+    macos_base_packages:
+      - git
+      - curl
+      - python3
+      - nmap
+      - unzip
+
+    linux_light_packages:
+      - bat
+      - fzf
+      - expect
+      - wget
+      - zsh
+      - tmux
+    macos_light_packages:
+      - bat
+      - fzf
+      - expect
+      - wget
+      - zsh
+      - tmux
+      - pfetch
+      - lazygit
+      - lazydocker
+
+    linux_heavy_packages:
+      - docker.io
+      - npm
+    macos_heavy_packages:
+      - node
+
 
   tasks:
 
-    ### REQUIRED START ###
-    - name: Ensure git is installed
-      become: yes
-      ansible.builtin.package:
-        name: git
-        state: present
+    ### PRE-FLIGHT CHECKS ###
+    - name: Check for Homebrew on macOS
+      ansible.builtin.shell: command -v brew
+      register: brew_check
+      failed_when: false
+      changed_when: false
+      when: is_macos
       tags:
         - always
 
-    - name: Ensure curl is installed
+    - name: Fail if Homebrew is not installed on macOS
+      ansible.builtin.fail:
+        msg: |
+          Homebrew is required on macOS but was not found.
+          Install it with:
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          Then re-run this playbook.
+      when: is_macos and brew_check.rc != 0
+      tags:
+        - always
+
+    - name: Check for Xcode Command Line Tools on macOS
+      ansible.builtin.shell: xcode-select -p
+      register: xcode_check
+      failed_when: false
+      changed_when: false
+      when: is_macos
+      tags:
+        - always
+
+    - name: Warn if Xcode CLT missing
+      ansible.builtin.debug:
+        msg: "Xcode Command Line Tools not found. Install with: xcode-select --install"
+      when: is_macos and xcode_check.rc != 0
+      tags:
+        - always
+
+
+    ### REQUIRED START ###
+    - name: Install base packages (Linux)
       become: yes
       ansible.builtin.package:
-        name: curl
+        name: "{{ linux_base_packages }}"
         state: present
+      when: is_linux
+      tags:
+        - always
+
+    - name: Install base packages (macOS)
+      community.general.homebrew:
+        name: "{{ macos_base_packages }}"
+        state: present
+      when: is_macos
       tags:
         - always
 
     - name: Clone koby-dev-env repository
       ansible.builtin.git:
         repo: https://github.com/KobyW/koby-dev-env
-        dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env"
+        dest: "{{ home_dir }}/koby-dev-env"
         version: main
         update: no
       tags:
@@ -55,115 +144,47 @@
     - name: Sync koby-dev-env repository
       ansible.builtin.git:
         repo: https://github.com/KobyW/koby-dev-env
-        dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env"
+        dest: "{{ home_dir }}/koby-dev-env"
         version: main
         update: yes
       tags:
         - never
         - sync
-
-    - name: Install pip
-      become: yes
-      ansible.builtin.package:
-        name: python3-pip
-        state: present
-      tags:
-        - always
-
-    - name: Ensure build-essential is installed
-      become: yes
-      ansible.builtin.package:
-        name: build-essential
-        state: present
-      tags:
-        - always
-
-    - name: Ensure net-tools is installed
-      become: yes
-      ansible.builtin.package:
-        name: net-tools
-        state: present
-      tags:
-        - always
-
-    - name: Ensure nmap is installed
-      become: yes
-      ansible.builtin.package:
-        name: nmap
-        state: present
-      tags:
-        - always
-
-    - name: Install unzip
-      become: yes
-      ansible.builtin.package:
-        name: unzip
-        state: present
-      tags:
-        - always
     ### REQUIRED END ###
 
 
     ### LIGHT MISC START ###
-    - name: Install bat
+    - name: Install light packages (Linux)
       become: yes
       ansible.builtin.package:
-        name: bat
+        name: "{{ linux_light_packages }}"
         state: present
+      when: is_linux
       tags:
         - light
-        - bat
+
+    - name: Install light packages (macOS)
+      community.general.homebrew:
+        name: "{{ macos_light_packages }}"
+        state: present
+      when: is_macos
+      tags:
+        - light
 
     - name: Install zoxide
       ansible.builtin.shell: curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
       args:
-        creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/zoxide"
+        creates: "{{ home_dir }}/.local/bin/zoxide"
       tags:
         - light
         - zoxide
-
-    - name: Install fzf
-      become: yes
-      ansible.builtin.package:
-        name: fzf
-        state: present
-      tags:
-        - light
-        - fzf
-
-    - name: Install expect
-      become: yes
-      ansible.builtin.package:
-        name: expect
-        state: present
-      tags:
-        - light
-        - expect
-
-    - name: Install wget
-      become: yes
-      ansible.builtin.package:
-        name: wget
-        state: present
-      tags:
-        - light
-        - wget
     ### LIGHT MISC END ###
 
 
     ### ZSH START ###
-    - name: Install zsh
-      become: yes
-      ansible.builtin.package:
-        name: zsh
-        state: present
-      tags:
-        - light
-        - zsh
-
     - name: Check if Oh My Zsh is installed
       ansible.builtin.stat:
-        path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.oh-my-zsh"
+        path: "{{ home_dir }}/.oh-my-zsh"
       register: oh_my_zsh_installed
       tags:
         - light
@@ -172,7 +193,7 @@
 
     - name: Install Oh My Zsh
       ansible.builtin.shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-      when: 
+      when:
         - not oh_my_zsh_installed.stat.exists
       tags:
         - light
@@ -182,7 +203,7 @@
     - name: Install zsh-autosuggestions
       ansible.builtin.git:
         repo: https://github.com/zsh-users/zsh-autosuggestions
-        dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+        dest: "{{ home_dir }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
         update: no
       tags:
         - light
@@ -194,15 +215,15 @@
 
         - name: Backup existing .zshrc
           ansible.builtin.copy:
-            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.zshrc"
-            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.zshrc.bak"
+            src: "{{ home_dir }}/.zshrc"
+            dest: "{{ home_dir }}/.zshrc.bak"
             remote_src: yes
           ignore_errors: yes
 
         - name: Link .zshrc
           ansible.builtin.file:
-            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env/configs/zshrc"
-            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.zshrc"
+            src: "{{ home_dir }}/koby-dev-env/configs/zshrc"
+            dest: "{{ home_dir }}/.zshrc"
             state: link
             force: yes
 
@@ -211,11 +232,21 @@
         - zsh
         - zshrc-copy
 
-    - name: Ensure zsh is the default shell
+    - name: Ensure zsh is the default shell (Linux)
       become: yes
       ansible.builtin.user:
         name: "{{ ansible_user }}"
         shell: /bin/zsh
+      when: is_linux
+      tags:
+        - light
+        - zsh
+        - zsh-shell
+
+    - name: Ensure zsh is the default shell (macOS)
+      ansible.builtin.shell: chsh -s /bin/zsh
+      changed_when: false
+      when: is_macos
       tags:
         - light
         - zsh
@@ -223,7 +254,7 @@
 
     - name: Export SHELL environment variable
       ansible.builtin.lineinfile:
-        path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.bashrc"
+        path: "{{ home_dir }}/.bashrc"
         line: 'export SHELL=/bin/zsh'
         create: yes
       tags:
@@ -240,21 +271,20 @@
         - name: Clone Powerlevel10k repository
           ansible.builtin.git:
             repo: 'https://github.com/romkatv/powerlevel10k.git'
-              #dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.oh-my-zsh/custom/themes/powerlevel10k"
-            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/powerlevel10k"
+            dest: "{{ home_dir }}/powerlevel10k"
             depth: 1
 
         - name: Backup existing p10k.zsh
           ansible.builtin.copy:
-            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.p10k.zsh"
-            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.p10k.zsh.bak"
+            src: "{{ home_dir }}/.p10k.zsh"
+            dest: "{{ home_dir }}/.p10k.zsh.bak"
             remote_src: yes
           ignore_errors: yes
 
         - name: Link p10k.zsh
           ansible.builtin.file:
-            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env/configs/p10k.zsh"
-            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.p10k.zsh"
+            src: "{{ home_dir }}/koby-dev-env/configs/p10k.zsh"
+            dest: "{{ home_dir }}/.p10k.zsh"
             state: link
             force: yes
 
@@ -265,7 +295,8 @@
 
 
     ### NeoVim START ###
-    # Note: For ARM64/aarch64, I use pre-built AppImage from matsuu/neovim-aarch64-appimage
+    # Note: For ARM64/aarch64 Linux, I use pre-built AppImage from matsuu/neovim-aarch64-appimage
+    # On macOS, we use brew install neovim (native ARM64 build)
     - name: Check current Neovim version
       ansible.builtin.shell: |
         if command -v nvim &> /dev/null; then
@@ -287,12 +318,12 @@
         - light
         - neovim
 
-    - name: Remove old Neovim installations
+    - name: Remove old Neovim installations (Linux)
       become: yes
       block:
         - name: Remove system package manager Neovim
           ansible.builtin.package:
-            name: 
+            name:
               - neovim
               - nvim
             state: absent
@@ -307,15 +338,17 @@
             - /usr/bin/nvim
             - /usr/local/share/nvim
             - /usr/share/nvim
-            - "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/nvim"
-            - "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-linux64"
-            - "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-appimage"
-      when: "'NVIM v0.9' not in current_nvim_version.stdout"
+            - "{{ home_dir }}/.local/bin/nvim"
+            - "{{ home_dir }}/.local/nvim-linux64"
+            - "{{ home_dir }}/.local/nvim-appimage"
+      when:
+        - is_linux
+        - "'NVIM v0.9' not in current_nvim_version.stdout"
       tags:
         - light
         - neovim
 
-    - name: Install Neovim v0.9.5
+    - name: Install Neovim v0.9.5 (Linux)
       block:
         - name: Ensure directories exist
           ansible.builtin.file:
@@ -323,8 +356,8 @@
             state: directory
             mode: '0755'
           loop:
-            - "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local"
-            - "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin"
+            - "{{ home_dir }}/.local"
+            - "{{ home_dir }}/.local/bin"
 
         - name: Debug architecture
           ansible.builtin.debug:
@@ -341,14 +374,14 @@
             - name: Extract Neovim
               ansible.builtin.unarchive:
                 src: "/tmp/nvim-linux64.tar.gz"
-                dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/"
+                dest: "{{ home_dir }}/.local/"
                 remote_src: yes
-                creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-linux64"
+                creates: "{{ home_dir }}/.local/nvim-linux64"
 
             - name: Create symlink in user's local bin
               ansible.builtin.file:
-                src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-linux64/bin/nvim"
-                dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/nvim"
+                src: "{{ home_dir }}/.local/nvim-linux64/bin/nvim"
+                dest: "{{ home_dir }}/.local/bin/nvim"
                 state: link
                 force: yes
 
@@ -370,15 +403,15 @@
               ansible.builtin.shell: |
                 cd /tmp
                 ./nvim.appimage --appimage-extract > /dev/null 2>&1
-                rm -rf {{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-app
-                mv squashfs-root {{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-app
+                rm -rf {{ home_dir }}/.local/nvim-app
+                mv squashfs-root {{ home_dir }}/.local/nvim-app
               args:
-                creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-app"
+                creates: "{{ home_dir }}/.local/nvim-app"
 
             - name: Create symlink for nvim
               ansible.builtin.file:
-                src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/nvim-app/AppRun"
-                dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/nvim"
+                src: "{{ home_dir }}/.local/nvim-app/AppRun"
+                dest: "{{ home_dir }}/.local/bin/nvim"
                 state: link
                 force: yes
 
@@ -391,20 +424,20 @@
         - name: Create symlink in /usr/local/bin
           become: yes
           ansible.builtin.file:
-            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/nvim"
+            src: "{{ home_dir }}/.local/bin/nvim"
             dest: "/usr/local/bin/nvim"
             state: link
             force: yes
 
         - name: Add Neovim to PATH in zshrc
           ansible.builtin.lineinfile:
-            path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.zshrc"
-            line: "export PATH=\"{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin:$PATH\""
+            path: "{{ home_dir }}/.zshrc"
+            line: "export PATH=\"{{ home_dir }}/.local/bin:$PATH\""
             create: yes
 
         - name: Verify Neovim installation
           ansible.builtin.shell: |
-            export PATH="{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin:/usr/local/bin:$PATH"
+            export PATH="{{ home_dir }}/.local/bin:/usr/local/bin:$PATH"
             which nvim && nvim --version
           register: nvim_version
           changed_when: false
@@ -414,7 +447,18 @@
           ansible.builtin.debug:
             msg: "Neovim version installed: {{ nvim_version.stdout | default('Installation may have failed') }}"
 
-      when: "'NVIM v0.9' not in current_nvim_version.stdout"
+      when:
+        - is_linux
+        - "'NVIM v0.9' not in current_nvim_version.stdout"
+      tags:
+        - light
+        - neovim
+
+    - name: Install Neovim (macOS/brew)
+      community.general.homebrew:
+        name: neovim
+        state: present
+      when: is_macos
       tags:
         - light
         - neovim
@@ -426,7 +470,7 @@
     # Master branch requires Neovim 0.10+ and will cause crashes on 0.9
     - name: Check if LunarVim is installed
       ansible.builtin.stat:
-        path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/lvim"
+        path: "{{ home_dir }}/.local/bin/lvim"
       register: lunarvim_installed
       tags:
         - light
@@ -437,28 +481,28 @@
       block:
         - name: Ensure nvim v0.9+ is available
           ansible.builtin.shell: |
-            export PATH="{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin:/usr/local/bin:$PATH"
+            export PATH="{{ brew_prefix }}/bin:{{ home_dir }}/.local/bin:/usr/local/bin:$PATH"
             which nvim && nvim --version
           register: nvim_check_before_lunar
           changed_when: false
           failed_when: >
-            'NVIM v0.9' not in nvim_check_before_lunar.stdout and 
+            'NVIM v0.9' not in nvim_check_before_lunar.stdout and
             'NVIM v0.10' not in nvim_check_before_lunar.stdout and
             'NVIM v0.11' not in nvim_check_before_lunar.stdout
 
         - name: Download and install LunarVim
           ansible.builtin.shell: |
-            export PATH="{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin:/usr/local/bin:$PATH"
+            export PATH="{{ brew_prefix }}/bin:{{ home_dir }}/.local/bin:/usr/local/bin:$PATH"
             # Use release-1.3 for Neovim 0.9 compatibility
             export LV_BRANCH="release-1.3/neovim-0.9"
             curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/${LV_BRANCH}/utils/installer/install.sh | bash -s -- --no-install-dependencies
           environment:
             LV_BRANCH: "release-1.3/neovim-0.9"
-            PATH: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+            PATH: "{{ brew_prefix }}/bin:{{ home_dir }}/.local/bin:/usr/local/bin:{{ ansible_env.PATH }}"
           args:
-            creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.local/bin/lvim"
+            creates: "{{ home_dir }}/.local/bin/lvim"
 
-      when: 
+      when:
         - not lunarvim_installed.stat.exists
       tags:
         - light
@@ -469,34 +513,34 @@
       block:
         - name: Ensure LunarVim config directory exists
           ansible.builtin.file:
-            path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim"
+            path: "{{ home_dir }}/.config/lvim"
             state: directory
             mode: '0755'
 
         - name: Backup existing config.lua
           ansible.builtin.copy:
-            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim/config.lua"
-            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim/config.lua.bak"
+            src: "{{ home_dir }}/.config/lvim/config.lua"
+            dest: "{{ home_dir }}/.config/lvim/config.lua.bak"
             remote_src: yes
           ignore_errors: yes
 
         - name: Link LunarVim config
           ansible.builtin.file:
-            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env/configs/LVIMconfig.lua"
-            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim/config.lua"
+            src: "{{ home_dir }}/koby-dev-env/configs/LVIMconfig.lua"
+            dest: "{{ home_dir }}/.config/lvim/config.lua"
             state: link
             force: yes
 
         - name: Ensure custom lua modules directory exists
           ansible.builtin.file:
-            path: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim/lua"
+            path: "{{ home_dir }}/.config/lvim/lua"
             state: directory
             mode: '0755'
 
         - name: Link lua/koby directory
           ansible.builtin.file:
-            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env/configs/lua/koby"
-            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.config/lvim/lua/koby"
+            src: "{{ home_dir }}/koby-dev-env/configs/lua/koby"
+            dest: "{{ home_dir }}/.config/lvim/lua/koby"
             state: link
             force: yes
 
@@ -509,19 +553,10 @@
 
 
     ### TMUX START ###
-    - name: Install tmux
-      become: yes
-      ansible.builtin.package:
-        name: tmux
-        state: present
-      tags:
-        - light
-        - tmux
-
     - name: Install tpm (tmux plugin manager)
       ansible.builtin.git:
         repo: https://github.com/tmux-plugins/tpm
-        dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.tmux/plugins/tpm"
+        dest: "{{ home_dir }}/.tmux/plugins/tpm"
         update: no
       tags:
         - light
@@ -532,14 +567,14 @@
       block:
         - name: Backup existing .tmux.conf
           ansible.builtin.copy:
-            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.tmux.conf"
-            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.tmux.conf.bak"
+            src: "{{ home_dir }}/.tmux.conf"
+            dest: "{{ home_dir }}/.tmux.conf.bak"
             remote_src: yes
           ignore_errors: yes
         - name: Link .tmux.conf
           ansible.builtin.file:
-            src: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/koby-dev-env/configs/tmux.conf"
-            dest: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.tmux.conf"
+            src: "{{ home_dir }}/koby-dev-env/configs/tmux.conf"
+            dest: "{{ home_dir }}/.tmux.conf"
             state: link
             force: yes
       tags:
@@ -550,15 +585,16 @@
 
 
     ### PFETCH START ###
-    - name: Check if pfetch is installed
+    - name: Check if pfetch is installed (Linux)
       ansible.builtin.stat:
         path: /usr/local/bin/pfetch
       register: pfetch_installed
+      when: is_linux
       tags:
         - light
         - pfetch
 
-    - name: Install pfetch
+    - name: Install pfetch (Linux)
       block:
 
         - name: Download pfetch
@@ -585,7 +621,9 @@
             - /tmp/pfetch-master.zip
             - /tmp/pfetch-master
 
-      when: 
+      when:
+        - is_linux
+        - pfetch_installed.stat is defined
         - not pfetch_installed.stat.exists
       tags:
         - light
@@ -594,29 +632,31 @@
 
 
     ### LAZY TOOLING START ###
-    - name: Install Lazydocker
+    - name: Install Lazydocker (Linux)
       ansible.builtin.shell: curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
       args:
         creates: /usr/local/bin/lazydocker
+      when: is_linux
       tags:
         - light
         - lazydocker
 
-    - name: Check if Lazygit is installed
+    - name: Check if Lazygit is installed (Linux)
       ansible.builtin.stat:
         path: /usr/local/bin/lazygit
       register: lazygit_installed
+      when: is_linux
       tags:
         - light
         - lazygit
 
-    - name: Install Lazygit
+    - name: Install Lazygit (Linux)
       block:
-        
+
         - name: Set Lazygit download URL based on architecture
           ansible.builtin.set_fact:
             lazygit_url: "{{ 'https://github.com/jesseduffield/lazygit/releases/download/v0.43.1/lazygit_0.43.1_Linux_arm64.tar.gz' if ansible_architecture == 'aarch64' else 'https://github.com/jesseduffield/lazygit/releases/download/v0.43.1/lazygit_0.43.1_Linux_x86_64.tar.gz' }}"
-        
+
         - name: Download Lazygit
           ansible.builtin.get_url:
             url: "{{ lazygit_url }}"
@@ -641,7 +681,9 @@
             - /tmp/lazygit.tar.gz
             - /tmp/lazygit
 
-      when: 
+      when:
+        - is_linux
+        - lazygit_installed.stat is defined
         - not lazygit_installed.stat.exists
       tags:
         - light
@@ -653,26 +695,37 @@
     - name: Install cargo
       ansible.builtin.shell: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       args:
-        creates: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}/.cargo/bin/cargo"
+        creates: "{{ home_dir }}/.cargo/bin/cargo"
       tags:
         - heavy
         - cargo
 
-    - name: Install docker.io
+    - name: Install heavy packages (Linux)
       become: yes
       ansible.builtin.package:
-        name: docker.io
+        name: "{{ linux_heavy_packages }}"
         state: present
+      when: is_linux
+      tags:
+        - heavy
+
+    - name: Install heavy packages (macOS)
+      community.general.homebrew:
+        name: "{{ macos_heavy_packages }}"
+        state: present
+      when: is_macos
+      tags:
+        - heavy
+
+    - name: Docker guidance for macOS
+      ansible.builtin.debug:
+        msg: |
+          Docker on macOS requires Docker Desktop (GUI app) or an alternative like Colima.
+          Install Docker Desktop: https://www.docker.com/products/docker-desktop/
+          Or use Colima: brew install colima docker && colima start
+          The 'docker' CLI has been included via the brew heavy packages if needed.
+      when: is_macos
       tags:
         - heavy
         - docker
-
-    - name: Install npm
-      become: yes
-      ansible.builtin.package:
-        name: npm
-        state: present
-      tags:
-        - heavy
-        - npm
     ### MISC HEAVY END ###

@@ -29,15 +29,35 @@ echo -e "${BOLD}${GREEN}Koby Dev Environment - Local Deployment${NC}"
 echo -e "${CYAN}=========================================${NC}"
 echo ""
 echo -e "${YELLOW}This will install the development environment on localhost.${NC}"
-echo -e "${YELLOW}You will be prompted for your sudo password if needed.${NC}"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo -e "${YELLOW}macOS detected. Sudo password is only needed for a few system tasks.${NC}"
+    echo -e "${YELLOW}Most packages will be installed via Homebrew (no sudo required).${NC}"
+else
+    echo -e "${YELLOW}You will be prompted for your sudo password if needed.${NC}"
+fi
 echo ""
+
+# Detect OS
+OS="$(uname -s)"
 
 # Check if ansible-playbook is installed
 if ! command -v ansible-playbook &> /dev/null; then
     echo -e "${RED}Error: ansible-playbook is not installed.${NC}"
     echo -e "${YELLOW}Please install ansible first:${NC}"
-    echo -e "${GREEN}  sudo apt-get update && sudo apt-get install ansible${NC}"
+    if [[ "$OS" == "Darwin" ]]; then
+        echo -e "${GREEN}  brew install ansible${NC}"
+    else
+        echo -e "${GREEN}  sudo apt-get update && sudo apt-get install ansible${NC}"
+    fi
     exit 1
+fi
+
+# On macOS, ensure the community.general collection is installed (needed for homebrew module)
+if [[ "$OS" == "Darwin" ]]; then
+    if ! ansible-galaxy collection list 2>/dev/null | grep -q "community.general"; then
+        echo -e "${YELLOW}Installing required Ansible collection: community.general${NC}"
+        ansible-galaxy collection install community.general
+    fi
 fi
 
 # Get the directory where this script is located

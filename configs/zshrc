@@ -42,6 +42,11 @@ echo -e "${GREEN}LOADING ZSHRC..${NC}"
 # If you come from bash you might have to change your $PATH.
 export PATH=$HOME/bin:/usr/local/bin:$PATH
 
+# Homebrew PATH (macOS Apple Silicon)
+if [[ "$(uname)" == "Darwin" && -d "/opt/homebrew" ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
@@ -104,11 +109,18 @@ echo -e "${BLUE}Loading misc exports and aliases..${NC}"
 
 export EDITOR='vim'
 export PATH=$HOME/.local/bin:$PATH
-export PATH=$HOME/.local/nvim-linux64/bin:$PATH
+if [[ "$(uname)" != "Darwin" ]]; then
+  export PATH=$HOME/.local/nvim-linux64/bin:$PATH
+fi
 alias vim="lvim"
 
-alias xc="xclip -selection clipboard"
-alias xp="xclip -selection clipboard -o"
+if [[ "$(uname)" == "Darwin" ]]; then
+  alias xc="pbcopy"
+  alias xp="pbpaste"
+else
+  alias xc="xclip -selection clipboard"
+  alias xp="xclip -selection clipboard -o"
+fi
 
 alias dev="git checkout dev"
 alias stage="git checkout stage"
@@ -122,9 +134,15 @@ alias sz='source $HOME/.zshrc && echo -e "${YELLOW}Sourced $HOME/.zshrc${NC}"'
 alias ez='vim $HOME/.zshrc'
 alias ezvi='vi $HOME/.zshrc'
 alias zcat='cat $HOME/.zshrc'
-alias explore='explorer.exe .'
+if [[ -n "$WSL_DISTRO_NAME" ]]; then
+  alias explore='explorer.exe .'
+fi
 alias ssh-agent-start='echo "eval \"\$(ssh-agent -s)\""; eval "$(ssh-agent -s)"'
-alias cat="batcat --style=plain"
+if [[ "$(uname)" == "Darwin" ]]; then
+  alias cat="bat --style=plain"
+else
+  alias cat="batcat --style=plain"
+fi
 alias lunar-edit="vi ~/.config/lvim/config.lua"
 alias lunar-edit-lvim="lvim ~/.config/lvim/config.lua"
 alias tpm-install="rm -rf ~/.config/tmux/plugins/tmux && ~/.tmux/plugins/tpm/scripts/install_plugins.sh"
@@ -221,7 +239,9 @@ fix-ssh-perms() {
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
-alias desktop="cd /mnt/c/Users/Koby/Desktop"
+if [[ -n "$WSL_DISTRO_NAME" ]]; then
+  alias desktop="cd /mnt/c/Users/Koby/Desktop"
+fi
 alias cdsp='env -i SHELL=/bin/bash HOME="$HOME" PATH="$PATH" TERM="$TERM" COLORTERM="$COLORTERM" claude --dangerously-skip-permissions'
 alias cdspc='env -i SHELL=/bin/bash HOME="$HOME" PATH="$PATH" TERM="$TERM" COLORTERM="$COLORTERM" claude --dangerously-skip-permissions --continue'
 
@@ -233,8 +253,10 @@ alias taskmaster='task-master'
 #`export LINTER_TYPE=eslint
 
 # Fix for Playwright/Chrome timeout in WSL2
-unset DISPLAY
-export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
+if [[ -n "$WSL_DISTRO_NAME" ]]; then
+  unset DISPLAY
+  export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
+fi
 
 # qlty
 export QLTY_INSTALL="$HOME/.qlty"
@@ -246,8 +268,16 @@ export CLAUDE_OPC_DIR="/home/woodk/continuous-claude/opc"
 # Elan (Lean version manager)
 [ -f "$HOME/.elan/env" ] && source "$HOME/.elan/env"
 
-# java path - install using sudo apt update && sudo apt install -y openjdk-21-jdk
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+# java path
+if [[ "$(uname)" == "Darwin" ]]; then
+  # macOS: brew install openjdk
+  export JAVA_HOME="$(/usr/libexec/java_home 2>/dev/null || echo /opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home)"
+else
+  # Linux: sudo apt install -y openjdk-21-jdk
+  export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+fi
 
 # Android Studio (WSL2 → Windows)
-export CAPACITOR_ANDROID_STUDIO_PATH="/mnt/c/Program Files/Android/Android Studio/bin/studio64.exe"
+if [[ -n "$WSL_DISTRO_NAME" ]]; then
+  export CAPACITOR_ANDROID_STUDIO_PATH="/mnt/c/Program Files/Android/Android Studio/bin/studio64.exe"
+fi
