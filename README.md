@@ -26,7 +26,7 @@ This repository provides an Ansible-based solution for setting up a complete dev
 - **Automated Setup**: One-command installation using Ansible
 - **Modular Installation**: Use tags to install only what you need
 - **Modern Terminal Stack**: Zsh with Oh-My-Zsh, Powerlevel10k theme, and tmux
-- **Advanced Text Editing**: Neovim v0.9.5 with LunarVim IDE layer
+- **Advanced Text Editing**: Neovim v0.12 with a lightweight hand-rolled config (lazy.nvim, LSP, treesitter, telescope)
 - **Developer Tools**: Docker, npm, Rust/Cargo, and various CLI utilities
 - **Version Control**: Lazygit for enhanced Git workflows
 - **Cross-Architecture Support**: Works on both x86_64 and ARM64 systems
@@ -106,8 +106,8 @@ ansible-playbook -i hosts/<inventory>.ini deploy.yml \
 | `configs/zshrc` | Zsh shell configuration with plugins, aliases, and custom functions |
 | `configs/p10k.zsh` | Powerlevel10k theme configuration for an enhanced prompt |
 | `configs/tmux.conf` | Tmux configuration with custom keybindings and plugins |
-| `configs/LVIMconfig.lua` | LunarVim IDE configuration with custom plugins and settings |
-| `configs/lua/koby/` | Additional Lua modules for LunarVim customization |
+| `configs/nvim/` | Neovim configuration (init.lua, plugin specs in `lua/plugins/`, custom modules in `lua/koby/`) |
+| `configs/claude/` | Claude Code assets (commands, skills, scripts, statusline) symlinked into `~/.claude` |
 
 ### Environment Files
 
@@ -121,7 +121,8 @@ ansible-playbook -i hosts/<inventory>.ini deploy.yml \
 | Script | Purpose |
 |------|---------|
 | `deploy-local.sh` | Simplified local deployment with colorful UI |
-| `set-configs-to-local.sh` | Link configuration files to home directory |
+| `capture-configs.sh` | Copy live machine configs back into the repo (skips already-symlinked ones) |
+| `util/misc/decommission-lunarvim.sh` | Back up (tarball in `~/.dotfile-backups`) and remove a legacy LunarVim install |
 | `util/misc/claude-init.sh` | Initialize Claude AI development tools |
 | `util/misc/setup-docker-permissions.sh` | Configure Docker user permissions |
 | `util/ssh/zsh-ssh-util.zshrc` | SSH utility functions for Zsh |
@@ -145,11 +146,11 @@ ansible-playbook -i hosts/<inventory>.ini deploy.yml \
   - Custom aliases and functions
 - **Powerlevel10k**: Feature-rich Zsh theme
 - **Tmux**: Terminal multiplexer with TPM (Tmux Plugin Manager)
-- **Neovim v0.9.5**: Modern text editor
-  - Architecture-aware installation (x86_64 and ARM64)
-- **LunarVim**: IDE layer for Neovim
-  - Uses release-1.3 branch for Neovim 0.9 compatibility
-  - Custom configuration with Tailwind CSS support
+- **Neovim v0.12**: Modern text editor from official release tarballs
+  - Architecture-aware installation (Linux x86_64/arm64, macOS via brew)
+  - Hand-rolled config: lazy.nvim, LSP (mason), treesitter, telescope, nvim-tree, noice, lualine, neoscroll, modicator
+  - Any legacy LunarVim install is backed up and removed automatically
+- **Ripgrep**: Fast search (used by telescope live_grep)
 - **Bat**: Enhanced `cat` with syntax highlighting
 - **Zoxide**: Smarter `cd` command with directory jumping
 - **Fzf**: Fuzzy finder for command-line
@@ -176,8 +177,8 @@ koby-dev-env/
 │   ├── zshrc              # Zsh configuration
 │   ├── p10k.zsh           # Powerlevel10k theme
 │   ├── tmux.conf          # Tmux configuration
-│   ├── LVIMconfig.lua     # LunarVim configuration
-│   └── lua/koby/          # LunarVim Lua modules
+│   ├── nvim/              # Neovim configuration (init.lua, lua/, lsp/)
+│   └── claude/            # Claude Code commands, skills, scripts
 ├── creds/                  # Vault credentials (gitignored)
 │   └── example-format.yml # Credential template
 ├── hosts/                  # Inventory files for remote hosts
@@ -197,13 +198,15 @@ The playbook uses Ansible tags to control which components are installed:
 | Tag | Description | Tools Included |
 |-----|-------------|----------------|
 | `always` | Always run (prerequisites) | Git, Curl, Build tools |
-| `light` | Lightweight tools | Zsh, Tmux, Neovim, LunarVim, CLI utilities |
+| `light` | Lightweight tools | Zsh, Tmux, Neovim, CLI utilities |
 | `heavy` | Resource-intensive tools | Docker, NPM, Cargo |
 | `zsh` | Zsh shell only | Zsh, Oh-My-Zsh, plugins |
 | `p10k` | Powerlevel10k theme | Theme installation and config |
 | `tmux` | Tmux only | Tmux and TPM |
-| `neovim` | Neovim editor | Neovim v0.9.5 |
-| `lunarvim`, `lvim` | LunarVim IDE | LunarVim and configurations |
+| `neovim` | Neovim editor | Neovim install, LunarVim migration, config symlink |
+| `lvim-migrate` | LunarVim removal only | Backup + decommission of a legacy LunarVim install |
+| `nvim-config` | Neovim config only | Symlink `~/.config/nvim` to the repo config |
+| `claude` | Claude Code assets | Symlink commands/skills/scripts/statusline into `~/.claude` |
 | `docker` | Docker only | Docker.io |
 | `npm` | NPM only | Node.js package manager |
 | `cargo` | Rust/Cargo only | Rust toolchain |
@@ -264,13 +267,14 @@ ansible-playbook deploy.yml -i localhost, --connection=local --tags "sync"
 ### Common Issues
 
 1. **Neovim Installation Fails**
-   - The playbook automatically detects architecture (x86_64 vs ARM64)
-   - For ARM systems, it uses AppImage from matsuu/neovim-aarch64-appimage
+   - The playbook automatically detects architecture (x86_64 vs arm64) and downloads the matching official tarball
+   - The pinned version lives in the `neovim_version` var in `deploy.yml`
    - Check the output with `-vv` flag for detailed error messages
 
-2. **LunarVim Crashes**
-   - Ensure Neovim v0.9.5 is installed (LunarVim release-1.3 is used for compatibility)
-   - Run `:checkhealth` in Neovim to diagnose issues
+2. **Neovim Plugins or LSP Misbehaving**
+   - Run `:checkhealth` and `:Lazy` in Neovim to diagnose issues
+   - LSP servers are managed with `:Mason` (`ts_ls` requires node on PATH)
+   - A LunarVim backup tarball (if one was migrated) is in `~/.dotfile-backups/`
 
 3. **Zsh Not Default Shell**
    - Log out and log back in after installation
@@ -303,7 +307,7 @@ After successful installation:
 1. **Restart your shell** or log out/in for Zsh to become default
 2. **Configure Powerlevel10k**: Run `p10k configure` if prompted
 3. **Install Tmux plugins**: Start tmux and press `Prefix + I`
-4. **Open LunarVim**: Run `lvim` to trigger plugin installation
+4. **Open Neovim**: Run `nvim` — lazy.nvim bootstraps and installs plugins on first launch
 5. **Docker setup** (if installed): Add yourself to docker group
    ```bash
    sudo usermod -aG docker $USER
