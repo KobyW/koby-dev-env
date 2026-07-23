@@ -109,10 +109,7 @@ echo -e "${BLUE}Loading misc exports and aliases..${NC}"
 
 export EDITOR='vim'
 export PATH=$HOME/.local/bin:$PATH
-if [[ "$(uname)" != "Darwin" ]]; then
-  export PATH=$HOME/.local/nvim-linux64/bin:$PATH
-fi
-alias vim="lvim"
+alias vim="nvim"
 
 if [[ "$(uname)" == "Darwin" ]]; then
   alias xc="pbcopy"
@@ -143,8 +140,7 @@ if [[ "$(uname)" == "Darwin" ]]; then
 else
   alias cat="batcat --style=plain"
 fi
-alias lunar-edit="vi ~/.config/lvim/config.lua"
-alias lunar-edit-lvim="lvim ~/.config/lvim/config.lua"
+alias nvim-edit="nvim ~/.config/nvim/init.lua"
 alias tpm-install="rm -rf ~/.config/tmux/plugins/tmux && ~/.tmux/plugins/tpm/scripts/install_plugins.sh"
 alias tmux-edit-home="vim ~/.tmux.conf"
 alias tmux-reset="tmux kill-server; rm -rf /tmp/tmux-* && tpm-install"
