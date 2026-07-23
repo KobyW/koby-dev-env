@@ -14,7 +14,8 @@
 #   - macOS: brew must be installed (https://brew.sh)
 #   - macOS: ansible-galaxy collection install community.general
 #
-# Error handling: All tasks will continue on error, with a summary at the end
+# Error handling: ignore_errors is set play-wide, so failed tasks do not abort
+# the run; they appear as 'ignored' in the standard play recap at the end
 - name: Setup Development Environment
   hosts: all
   gather_facts: yes
@@ -32,6 +33,13 @@
     is_linux: "{{ ansible_system == 'Linux' }}"
     home_dir: "{{ ansible_env.HOME | default('/home/' + ansible_user) }}"
     brew_prefix: "{{ '/opt/homebrew' if ansible_architecture == 'arm64' else '/usr/local' }}"
+
+    # Neovim: official release tarballs cover Linux x86_64 + arm64 and macOS
+    neovim_version: "v0.12.4"
+    neovim_arch: "{{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64' }}"
+
+    # Suffix for one-time config backups so repeated runs never overwrite them
+    backup_suffix: "{{ ansible_date_time.iso8601_basic_short }}"
 
     # Package lists per OS
     linux_base_packages:
@@ -56,6 +64,7 @@
       - wget
       - zsh
       - tmux
+      - ripgrep   # telescope live_grep
     macos_light_packages:
       - bat
       - fzf
@@ -63,6 +72,7 @@
       - wget
       - zsh
       - tmux
+      - ripgrep   # telescope live_grep
       - pfetch
       - lazygit
       - lazydocker
@@ -213,12 +223,17 @@
     - name: Copy .zshrc to home directory
       block:
 
-        - name: Backup existing .zshrc
+        - name: Check existing .zshrc
+          ansible.builtin.stat:
+            path: "{{ home_dir }}/.zshrc"
+          register: zshrc_stat
+
+        - name: Backup existing .zshrc (only if it is a real file, not our symlink)
           ansible.builtin.copy:
             src: "{{ home_dir }}/.zshrc"
-            dest: "{{ home_dir }}/.zshrc.bak"
+            dest: "{{ home_dir }}/.zshrc.bak-{{ backup_suffix }}"
             remote_src: yes
-          ignore_errors: yes
+          when: zshrc_stat.stat.exists and not zshrc_stat.stat.islnk
 
         - name: Link .zshrc
           ansible.builtin.file:
@@ -274,12 +289,17 @@
             dest: "{{ home_dir }}/powerlevel10k"
             depth: 1
 
-        - name: Backup existing p10k.zsh
+        - name: Check existing p10k.zsh
+          ansible.builtin.stat:
+            path: "{{ home_dir }}/.p10k.zsh"
+          register: p10k_stat
+
+        - name: Backup existing p10k.zsh (only if it is a real file, not our symlink)
           ansible.builtin.copy:
             src: "{{ home_dir }}/.p10k.zsh"
-            dest: "{{ home_dir }}/.p10k.zsh.bak"
+            dest: "{{ home_dir }}/.p10k.zsh.bak-{{ backup_suffix }}"
             remote_src: yes
-          ignore_errors: yes
+          when: p10k_stat.stat.exists and not p10k_stat.stat.islnk
 
         - name: Link p10k.zsh
           ansible.builtin.file:
@@ -295,8 +315,8 @@
 
 
     ### NeoVim START ###
-    # Note: For ARM64/aarch64 Linux, I use pre-built AppImage from matsuu/neovim-aarch64-appimage
-    # On macOS, we use brew install neovim (native ARM64 build)
+    # Official Neovim release tarballs cover Linux x86_64 + arm64; macOS uses brew.
+    # Version is pinned once via the neovim_version var at the top of this playbook.
     - name: Check current Neovim version
       ansible.builtin.shell: |
         if command -v nvim &> /dev/null; then
@@ -313,42 +333,12 @@
 
     - name: Display current Neovim version
       ansible.builtin.debug:
-        msg: "Current Neovim: {{ current_nvim_version.stdout }}"
+        msg: "Current Neovim: {{ current_nvim_version.stdout }} (target: {{ neovim_version }})"
       tags:
         - light
         - neovim
 
-    - name: Remove old Neovim installations (Linux)
-      become: yes
-      block:
-        - name: Remove system package manager Neovim
-          ansible.builtin.package:
-            name:
-              - neovim
-              - nvim
-            state: absent
-          ignore_errors: yes
-
-        - name: Remove all Neovim binaries and directories
-          ansible.builtin.file:
-            path: "{{ item }}"
-            state: absent
-          loop:
-            - /usr/local/bin/nvim
-            - /usr/bin/nvim
-            - /usr/local/share/nvim
-            - /usr/share/nvim
-            - "{{ home_dir }}/.local/bin/nvim"
-            - "{{ home_dir }}/.local/nvim-linux64"
-            - "{{ home_dir }}/.local/nvim-appimage"
-      when:
-        - is_linux
-        - "'NVIM v0.9' not in current_nvim_version.stdout"
-      tags:
-        - light
-        - neovim
-
-    - name: Install Neovim v0.9.5 (Linux)
+    - name: Install Neovim {{ neovim_version }} (Linux)
       block:
         - name: Ensure directories exist
           ansible.builtin.file:
@@ -359,67 +349,39 @@
             - "{{ home_dir }}/.local"
             - "{{ home_dir }}/.local/bin"
 
-        - name: Debug architecture
-          ansible.builtin.debug:
-            msg: "Detected architecture: {{ ansible_architecture }}"
+        - name: Download Neovim release tarball ({{ neovim_arch }})
+          ansible.builtin.get_url:
+            url: "https://github.com/neovim/neovim/releases/download/{{ neovim_version }}/nvim-linux-{{ neovim_arch }}.tar.gz"
+            dest: "/tmp/nvim-linux-{{ neovim_arch }}.tar.gz"
+            mode: '0644'
 
-        - name: Install Neovim for x86_64/amd64
-          block:
-            - name: Download Neovim v0.9.5 binary (x86_64)
-              ansible.builtin.get_url:
-                url: "https://github.com/neovim/neovim/releases/download/v0.9.5/nvim-linux64.tar.gz"
-                dest: "/tmp/nvim-linux64.tar.gz"
-                mode: '0644'
+        - name: Remove previous Neovim install dirs (including legacy layouts)
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - "{{ home_dir }}/.local/nvim-linux-{{ neovim_arch }}"
+            - "{{ home_dir }}/.local/nvim-linux64"
+            - "{{ home_dir }}/.local/nvim-app"
+            - "{{ home_dir }}/.local/nvim-appimage"
 
-            - name: Extract Neovim
-              ansible.builtin.unarchive:
-                src: "/tmp/nvim-linux64.tar.gz"
-                dest: "{{ home_dir }}/.local/"
-                remote_src: yes
-                creates: "{{ home_dir }}/.local/nvim-linux64"
+        - name: Extract Neovim
+          ansible.builtin.unarchive:
+            src: "/tmp/nvim-linux-{{ neovim_arch }}.tar.gz"
+            dest: "{{ home_dir }}/.local/"
+            remote_src: yes
 
-            - name: Create symlink in user's local bin
-              ansible.builtin.file:
-                src: "{{ home_dir }}/.local/nvim-linux64/bin/nvim"
-                dest: "{{ home_dir }}/.local/bin/nvim"
-                state: link
-                force: yes
+        - name: Create symlink in user's local bin
+          ansible.builtin.file:
+            src: "{{ home_dir }}/.local/nvim-linux-{{ neovim_arch }}/bin/nvim"
+            dest: "{{ home_dir }}/.local/bin/nvim"
+            state: link
+            force: yes
 
-            - name: Remove Neovim archive
-              ansible.builtin.file:
-                path: "/tmp/nvim-linux64.tar.gz"
-                state: absent
-          when: ansible_architecture in ['x86_64', 'amd64']
-
-        - name: Install Neovim for ARM/other architectures
-          block:
-            - name: Download ARM64 Neovim AppImage
-              ansible.builtin.get_url:
-                url: "https://github.com/matsuu/neovim-aarch64-appimage/releases/download/v0.9.5/nvim-v0.9.5-aarch64.appimage"
-                dest: "/tmp/nvim.appimage"
-                mode: '0755'
-
-            - name: Extract AppImage
-              ansible.builtin.shell: |
-                cd /tmp
-                ./nvim.appimage --appimage-extract > /dev/null 2>&1
-                rm -rf {{ home_dir }}/.local/nvim-app
-                mv squashfs-root {{ home_dir }}/.local/nvim-app
-              args:
-                creates: "{{ home_dir }}/.local/nvim-app"
-
-            - name: Create symlink for nvim
-              ansible.builtin.file:
-                src: "{{ home_dir }}/.local/nvim-app/AppRun"
-                dest: "{{ home_dir }}/.local/bin/nvim"
-                state: link
-                force: yes
-
-            - name: Clean up AppImage
-              ansible.builtin.file:
-                path: "/tmp/nvim.appimage"
-                state: absent
-          when: ansible_architecture not in ['x86_64', 'amd64']
+        - name: Remove Neovim archive
+          ansible.builtin.file:
+            path: "/tmp/nvim-linux-{{ neovim_arch }}.tar.gz"
+            state: absent
 
         - name: Create symlink in /usr/local/bin
           become: yes
@@ -429,27 +391,21 @@
             state: link
             force: yes
 
-        - name: Add Neovim to PATH in zshrc
-          ansible.builtin.lineinfile:
-            path: "{{ home_dir }}/.zshrc"
-            line: "export PATH=\"{{ home_dir }}/.local/bin:$PATH\""
-            create: yes
-
         - name: Verify Neovim installation
           ansible.builtin.shell: |
             export PATH="{{ home_dir }}/.local/bin:/usr/local/bin:$PATH"
             which nvim && nvim --version
-          register: nvim_version
+          register: nvim_verify
           changed_when: false
           failed_when: false
 
         - name: Display Neovim version
           ansible.builtin.debug:
-            msg: "Neovim version installed: {{ nvim_version.stdout | default('Installation may have failed') }}"
+            msg: "Neovim installed: {{ nvim_verify.stdout | default('Installation may have failed') }}"
 
       when:
         - is_linux
-        - "'NVIM v0.9' not in current_nvim_version.stdout"
+        - "neovim_version not in current_nvim_version.stdout"
       tags:
         - light
         - neovim
@@ -465,91 +421,81 @@
     ### NeoVim END ###
 
 
-    ### LunarVim START ###
-    # Note: Using LunarVim release-1.3 for Neovim 0.9 compatibility
-    # Master branch requires Neovim 0.10+ and will cause crashes on 0.9
-    - name: Check if LunarVim is installed
+    ### LUNARVIM MIGRATION START ###
+    # LunarVim is unmaintained; this repo now ships a bare Neovim config
+    # (configs/nvim). Any existing LunarVim install is archived to a
+    # timestamped tarball in ~/.dotfile-backups and then removed.
+    - name: Check for LunarVim launcher
       ansible.builtin.stat:
         path: "{{ home_dir }}/.local/bin/lvim"
-      register: lunarvim_installed
+      register: lvim_bin
       tags:
         - light
-        - lunarvim
-        - lvim
+        - neovim
+        - lvim-migrate
 
-    - name: Install LunarVim
-      block:
-        - name: Ensure nvim v0.9+ is available
-          ansible.builtin.shell: |
-            export PATH="{{ brew_prefix }}/bin:{{ home_dir }}/.local/bin:/usr/local/bin:$PATH"
-            which nvim && nvim --version
-          register: nvim_check_before_lunar
-          changed_when: false
-          failed_when: >
-            'NVIM v0.9' not in nvim_check_before_lunar.stdout and
-            'NVIM v0.10' not in nvim_check_before_lunar.stdout and
-            'NVIM v0.11' not in nvim_check_before_lunar.stdout
-
-        - name: Download and install LunarVim
-          ansible.builtin.shell: |
-            export PATH="{{ brew_prefix }}/bin:{{ home_dir }}/.local/bin:/usr/local/bin:$PATH"
-            # Use release-1.3 for Neovim 0.9 compatibility
-            export LV_BRANCH="release-1.3/neovim-0.9"
-            curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/${LV_BRANCH}/utils/installer/install.sh | bash -s -- --no-install-dependencies
-          environment:
-            LV_BRANCH: "release-1.3/neovim-0.9"
-            PATH: "{{ brew_prefix }}/bin:{{ home_dir }}/.local/bin:/usr/local/bin:{{ ansible_env.PATH }}"
-          args:
-            creates: "{{ home_dir }}/.local/bin/lvim"
-
-      when:
-        - not lunarvim_installed.stat.exists
+    - name: Check for LunarVim config directory
+      ansible.builtin.stat:
+        path: "{{ home_dir }}/.config/lvim"
+      register: lvim_cfg
       tags:
         - light
-        - lunarvim
-        - lvim
+        - neovim
+        - lvim-migrate
 
-    - name: Deploy LunarVim configuration
-      block:
-        - name: Ensure LunarVim config directory exists
-          ansible.builtin.file:
-            path: "{{ home_dir }}/.config/lvim"
-            state: directory
-            mode: '0755'
-
-        - name: Backup existing config.lua
-          ansible.builtin.copy:
-            src: "{{ home_dir }}/.config/lvim/config.lua"
-            dest: "{{ home_dir }}/.config/lvim/config.lua.bak"
-            remote_src: yes
-          ignore_errors: yes
-
-        - name: Link LunarVim config
-          ansible.builtin.file:
-            src: "{{ home_dir }}/koby-dev-env/configs/LVIMconfig.lua"
-            dest: "{{ home_dir }}/.config/lvim/config.lua"
-            state: link
-            force: yes
-
-        - name: Ensure custom lua modules directory exists
-          ansible.builtin.file:
-            path: "{{ home_dir }}/.config/lvim/lua"
-            state: directory
-            mode: '0755'
-
-        - name: Link lua/koby directory
-          ansible.builtin.file:
-            src: "{{ home_dir }}/koby-dev-env/configs/lua/koby"
-            dest: "{{ home_dir }}/.config/lvim/lua/koby"
-            state: link
-            force: yes
-
+    - name: Back up and decommission LunarVim (idempotent)
+      ansible.builtin.script: "{{ playbook_dir }}/util/misc/decommission-lunarvim.sh"
+      when: lvim_bin.stat.exists or lvim_cfg.stat.exists
       tags:
         - light
-        - lunarvim
-        - lvim
-        - lvim-config
-    ### LunarVim END ###
+        - neovim
+        - lvim-migrate
+    ### LUNARVIM MIGRATION END ###
+
+
+    ### NEOVIM CONFIG START ###
+    - name: Check existing ~/.config/nvim
+      ansible.builtin.stat:
+        path: "{{ home_dir }}/.config/nvim"
+      register: nvim_cfg_stat
+      tags:
+        - light
+        - neovim
+        - nvim-config
+
+    - name: Back up existing ~/.config/nvim (only if it is not our symlink)
+      ansible.builtin.command:
+        argv:
+          - mv
+          - "{{ home_dir }}/.config/nvim"
+          - "{{ home_dir }}/.config/nvim.bak-{{ backup_suffix }}"
+      when: nvim_cfg_stat.stat.exists and not nvim_cfg_stat.stat.islnk
+      tags:
+        - light
+        - neovim
+        - nvim-config
+
+    - name: Ensure ~/.config exists
+      ansible.builtin.file:
+        path: "{{ home_dir }}/.config"
+        state: directory
+        mode: '0755'
+      tags:
+        - light
+        - neovim
+        - nvim-config
+
+    - name: Link ~/.config/nvim to repo config
+      ansible.builtin.file:
+        src: "{{ home_dir }}/koby-dev-env/configs/nvim"
+        dest: "{{ home_dir }}/.config/nvim"
+        state: link
+        force: yes
+      tags:
+        - light
+        - neovim
+        - nvim-config
+    ### NEOVIM CONFIG END ###
 
 
     ### TMUX START ###
@@ -565,12 +511,16 @@
 
     - name: Copy .tmux.conf to home directory
       block:
-        - name: Backup existing .tmux.conf
+        - name: Check existing .tmux.conf
+          ansible.builtin.stat:
+            path: "{{ home_dir }}/.tmux.conf"
+          register: tmux_conf_stat
+        - name: Backup existing .tmux.conf (only if it is a real file, not our symlink)
           ansible.builtin.copy:
             src: "{{ home_dir }}/.tmux.conf"
-            dest: "{{ home_dir }}/.tmux.conf.bak"
+            dest: "{{ home_dir }}/.tmux.conf.bak-{{ backup_suffix }}"
             remote_src: yes
-          ignore_errors: yes
+          when: tmux_conf_stat.stat.exists and not tmux_conf_stat.stat.islnk
         - name: Link .tmux.conf
           ansible.builtin.file:
             src: "{{ home_dir }}/koby-dev-env/configs/tmux.conf"
@@ -582,6 +532,117 @@
         - tmux
         - tmux-copy
     ### TMUX END ###
+
+
+    ### CLAUDE CONFIG START ###
+    # Symlinks repo Claude Code assets into ~/.claude so git updates propagate.
+    # (Symlinks, not hardlinks - git checkouts silently break hardlinks.)
+    - name: Ensure ~/.claude directories exist
+      ansible.builtin.file:
+        path: "{{ home_dir }}/.claude/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - commands
+        - scripts
+        - skills
+      tags:
+        - light
+        - claude
+
+    - name: Find repo Claude command files
+      ansible.builtin.find:
+        paths: "{{ home_dir }}/koby-dev-env/configs/claude/commands"
+        patterns: "*.md"
+      register: claude_commands
+      tags:
+        - light
+        - claude
+
+    - name: Link Claude commands
+      ansible.builtin.file:
+        src: "{{ item.path }}"
+        dest: "{{ home_dir }}/.claude/commands/{{ item.path | basename }}"
+        state: link
+        force: yes
+      loop: "{{ claude_commands.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      tags:
+        - light
+        - claude
+
+    - name: Find repo Claude scripts
+      ansible.builtin.find:
+        paths: "{{ home_dir }}/koby-dev-env/configs/claude/scripts"
+        patterns: "*.sh"
+      register: claude_scripts
+      tags:
+        - light
+        - claude
+
+    - name: Link Claude scripts
+      ansible.builtin.file:
+        src: "{{ item.path }}"
+        dest: "{{ home_dir }}/.claude/scripts/{{ item.path | basename }}"
+        state: link
+        force: yes
+      loop: "{{ claude_scripts.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      tags:
+        - light
+        - claude
+
+    - name: Find repo Claude skills
+      ansible.builtin.find:
+        paths: "{{ home_dir }}/koby-dev-env/configs/claude/skills"
+        file_type: directory
+        recurse: no
+      register: claude_skills
+      tags:
+        - light
+        - claude
+
+    - name: Remove copied (non-symlink) skill dirs so they can be linked
+      ansible.builtin.shell: |
+        dest="{{ home_dir }}/.claude/skills/{{ item.path | basename }}"
+        if [ -d "$dest" ] && [ ! -L "$dest" ]; then
+          rm -rf "$dest"
+          echo removed
+        fi
+      register: skill_dir_cleanup
+      changed_when: "'removed' in skill_dir_cleanup.stdout"
+      loop: "{{ claude_skills.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      tags:
+        - light
+        - claude
+
+    - name: Link Claude skills
+      ansible.builtin.file:
+        src: "{{ item.path }}"
+        dest: "{{ home_dir }}/.claude/skills/{{ item.path | basename }}"
+        state: link
+        force: yes
+      loop: "{{ claude_skills.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      tags:
+        - light
+        - claude
+
+    - name: Link Claude statusline script
+      ansible.builtin.file:
+        src: "{{ home_dir }}/koby-dev-env/configs/claude/statusline-command.sh"
+        dest: "{{ home_dir }}/.claude/statusline-command.sh"
+        state: link
+        force: yes
+      tags:
+        - light
+        - claude
+    ### CLAUDE CONFIG END ###
 
 
     ### PFETCH START ###
